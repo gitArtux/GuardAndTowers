@@ -3,15 +3,13 @@
 #include <cstdint>
 
 using namespace std;
-struct player{
-    list<tuple<uint8_t,list<uint64_t>>> l_figures;
-    uint64_t figures;
-};
+
 
 class Board {
     private:
-        struct player player1;
-        struct player player2;
+        list<uint64_t> l_figuresR;
+        list<uint64_t> l_figuresL;
+
 
         uint64_t mask_1right = 0b0000000000000000000000000000000000000000000000000000000000000000;
         uint64_t mask_1left  = 0b0000000000000000000000000000000000000000000000000000000000000000;
@@ -51,8 +49,13 @@ class Board {
   
     public:
         Board() {
-            // Initialize the board and players here
+            
         }
+
+        void init_board() {
+            // Initialize the board with pieces
+        }
+
 
         list<tuple<list<uint64_t>,list<uint64_t>>> move_generation() {
             // genrate moves
