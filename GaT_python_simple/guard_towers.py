@@ -30,6 +30,7 @@ the opposing castle square (D1 for red, D7 for blue).
 Enjoy!
 """
 
+
 import sys
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -37,31 +38,40 @@ from typing import List, Optional, Tuple
 FILES = 'ABCDEFG'
 RANKS = '1234567'
 BOARD_SIZE = 7
+DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1)]  # E, W, N, S
 
-# --- pieces -----------------------------------------------------------------
+
+# ---------------------------------------------------------------------------#
+# Pieces
+# ---------------------------------------------------------------------------#
 @dataclass
 class Piece:
     color: str                # 'b' (blue) or 'r' (red)
     kind: str                 # 'guard' or 'tower'
     height: int = 1           # only used for towers
 
+    # ---------- behaviour --------------------------------------------------#
     def can_capture(self, other: 'Piece', moving_height: int) -> bool:
+        """Return True if `self` (or the top part of a tower) may capture `other`."""
         if other is None:
             return False
         if self.kind == 'guard':
-            return True                   # guard captures anything
+            return True
         # self is tower
         if other.kind == 'guard':
-            return True                   # any tower captures a guard
+            return True
         return moving_height >= other.height  # tower vs tower
 
     def char(self) -> str:
+        """ASCII representation (2–3 chars)."""
         if self.kind == 'guard':
             return self.color.upper() + 'G'
         return self.color + str(self.height)
 
 
-# --- helpers ----------------------------------------------------------------
+# ---------------------------------------------------------------------------#
+# Helper functions
+# ---------------------------------------------------------------------------#
 def coord_to_xy(coord: str) -> Tuple[int, int]:
     if len(coord) != 2 or coord[0] not in FILES or coord[1] not in RANKS:
         raise ValueError(f'Invalid square: {coord}')
@@ -69,8 +79,10 @@ def coord_to_xy(coord: str) -> Tuple[int, int]:
     y = RANKS.index(coord[1])
     return x, y
 
+
 def xy_to_coord(x: int, y: int) -> str:
     return FILES[x] + RANKS[y]
+
 
 def parse_move(move: str) -> Tuple[str, str, Optional[int]]:
     """Return (from_square, to_square, n) where n is None = whole stack."""
@@ -82,7 +94,9 @@ def parse_move(move: str) -> Tuple[str, str, Optional[int]]:
     return frm, to, n
 
 
-# --- board ------------------------------------------------------------------
+# ---------------------------------------------------------------------------#
+# Board
+# ---------------------------------------------------------------------------#
 class Board:
     def __init__(self):
         self.grid: List[List[Optional[Piece]]] = [
@@ -90,8 +104,7 @@ class Board:
         ]
         self._setup_initial()
 
-    # initial array – symmetrical:
-    #  towers : A,B,F,G on baseline + C,E on 2nd rank + D on 3rd rank
+    # ---------- setup ------------------------------------------------------#
     def _setup_initial(self):
         # blue side (bottom)
         self.place('D1', Piece('b', 'guard'))
@@ -102,7 +115,7 @@ class Board:
         for sq in ('A7', 'B7', 'F7', 'G7', 'C6', 'E6', 'D5'):
             self.place(sq, Piece('r', 'tower'))
 
-    # -- low‑level -----------------------------------------------------------
+    # ---------- low‑level access ------------------------------------------#
     def piece_at(self, coord: str) -> Optional[Piece]:
         x, y = coord_to_xy(coord)
         return self.grid[y][x]
@@ -111,9 +124,9 @@ class Board:
         x, y = coord_to_xy(coord)
         self.grid[y][x] = piece
 
-    # -- logic ---------------------------------------------------------------
-    def apply_move(self, player: str, frm: str, to: str, n: Optional[int]) -> str:
-        """Validate and execute a move. Return '' or a win/lose message."""
+    # ---------- move execution --------------------------------------------#
+    def apply_move(self, player: str, frm: str, to: str, n: Optional[int]) -> None:
+        """Validate and execute a move (mutates board). Raises ValueError on error."""
         moving_piece = self.piece_at(frm)
         if moving_piece is None or moving_piece.color != player:
             raise ValueError('No friendly piece on the origin square.')
@@ -121,7 +134,7 @@ class Board:
         dx = FILES.index(to[0]) - FILES.index(frm[0])
         dy = RANKS.index(to[1]) - RANKS.index(frm[1])
 
-        # --- guard ----------------------------------------------------------
+        # ---- guard --------------------------------------------------------#
         if moving_piece.kind == 'guard':
             if abs(dx) + abs(dy) != 1:
                 raise ValueError('Guard moves exactly one orthogonal square.')
@@ -132,28 +145,24 @@ class Board:
                 raise ValueError('Guard cannot move onto a friendly piece.')
             self.place(frm, None)
             self.place(to, moving_piece)
-            # capture
-            if dest_piece:
-                # dest_piece is captured
-                pass
-            return ''
+            return
 
-        # --- tower ----------------------------------------------------------
+        # ---- tower --------------------------------------------------------#
         height = moving_piece.height
         move_n = height if n is None else n
         if move_n < 1 or move_n > height:
             raise ValueError('Invalid number of stones to move.')
 
-        # direction must be orthogonal & distance == move_n
         if dx != 0 and dy != 0:
             raise ValueError('Towers move orthogonally – no diagonals.')
         distance = abs(dx or dy)
-        direction = (dx and (1 if dx > 0 else -1), dy and (1 if dy > 0 else -1))
+        # direction unit vector
+        step_x = 0 if dx == 0 else (1 if dx > 0 else -1)
+        step_y = 0 if dy == 0 else (1 if dy > 0 else -1)
         if distance != move_n:
             raise ValueError('Distance must equal number of moving stones.')
 
         # path clear?
-        step_x, step_y = direction
         x0, y0 = coord_to_xy(frm)
         for step in range(1, distance):
             xx = x0 + step_x * step
@@ -164,32 +173,82 @@ class Board:
         dest_piece = self.piece_at(to)
         moving_top = Piece(player, 'tower', move_n)
 
-        # capture / merge rules
+        # capture / merge
         if dest_piece:
             if dest_piece.color == player:
                 if dest_piece.kind != 'tower':
                     raise ValueError('Cannot merge with your own guard!')
-                # merge
-                dest_piece.height += move_n
+                dest_piece.height += move_n  # merge
             else:
                 if not moving_top.can_capture(dest_piece, move_n):
                     raise ValueError('Cannot capture a larger enemy tower.')
-                # capture
-                self.place(to, moving_top if dest_piece.kind != 'guard' else moving_top)
+                self.place(to, moving_top)  # capture
         else:
-            # simple move
-            self.place(to, moving_top)
+            self.place(to, moving_top)  # simple move
 
-        # leave behind (unstacking)
+        # unstack: leave remainder
         if move_n == height:
             self.place(frm, None)
         else:
             remaining = Piece(player, 'tower', height - move_n)
             self.place(frm, remaining)
 
-        return ''
+    # ---------- move generation -------------------------------------------#
+    def generate_moves(self, player: str) -> List[str]:
+        """Return a list of all legal moves for `player` in move‑notation."""
+        moves: List[str] = []
+        for y in range(BOARD_SIZE):
+            for x in range(BOARD_SIZE):
+                pc = self.grid[y][x]
+                if not pc or pc.color != player:
+                    continue
+                from_sq = xy_to_coord(x, y)
 
-    # -- utility -------------------------------------------------------------
+                # ----- guard moves
+                if pc.kind == 'guard':
+                    for dx, dy in DIRS:
+                        xx, yy = x + dx, y + dy
+                        if 0 <= xx < BOARD_SIZE and 0 <= yy < BOARD_SIZE:
+                            dest_pc = self.grid[yy][xx]
+                            if dest_pc is None or dest_pc.color != player:
+                                moves.append(f"{from_sq}-{xy_to_coord(xx, yy)}")
+                    continue  # guard done
+
+                # ----- tower moves
+                height = pc.height
+                for n in range(1, height + 1):         # number of stones moved
+                    for dx, dy in DIRS:
+                        xx, yy = x + dx * n, y + dy * n
+                        if not (0 <= xx < BOARD_SIZE and 0 <= yy < BOARD_SIZE):
+                            continue
+
+                        # clear path?
+                        blocked = False
+                        for step in range(1, n):
+                            if self.grid[y + dy * step][x + dx * step] is not None:
+                                blocked = True
+                                break
+                        if blocked:
+                            continue
+
+                        dest_pc = self.grid[yy][xx]
+                        legal = False
+                        if dest_pc is None:
+                            legal = True
+                        elif dest_pc.color == player:
+                            legal = dest_pc.kind == 'tower'  # merge with friendly tower
+                        else:
+                            # capture?
+                            temp_top = Piece(player, 'tower', n)
+                            legal = temp_top.can_capture(dest_pc, n)
+
+                        if legal:
+                            to_sq = xy_to_coord(xx, yy)
+                            suffix = '' if n == height else f'-{n}'
+                            moves.append(f"{from_sq}-{to_sq}{suffix}")
+        return sorted(moves)
+
+    # ---------- utility ----------------------------------------------------#
     def find_guard(self, color: str) -> Optional[str]:
         for y in range(BOARD_SIZE):
             for x in range(BOARD_SIZE):
@@ -202,7 +261,7 @@ class Board:
         # blue's castle D1, red's D7
         return (coord == 'D7' and color == 'b') or (coord == 'D1' and color == 'r')
 
-    # --- printing -----------------------------------------------------------
+    # ---------- printing ---------------------------------------------------#
     def draw(self):
         horizontal = '  +' + '---+' * BOARD_SIZE
         for y in reversed(range(BOARD_SIZE)):
@@ -217,7 +276,9 @@ class Board:
         print('    ' + '   '.join(FILES))
 
 
-# --- game loop --------------------------------------------------------------
+# ---------------------------------------------------------------------------#
+# Game Loop
+# ---------------------------------------------------------------------------#
 def main():
     board = Board()
     player = 'b'           # blue starts
@@ -225,27 +286,31 @@ def main():
 
     while True:
         board.draw()
-        print(f"\nTurn – {'Blue' if player=='b' else 'Red'}")
+        possible_moves = board.generate_moves(player)
+        print(f"\nTurn – {'Blue' if player == 'b' else 'Red'}")
+        print("Possible moves:")
+        print(' '.join(possible_moves) if possible_moves else '(none)')
 
         # prompt & parse
         try:
-            move = input('Enter move: ').strip()
+            move = input('\nEnter move (q to quit): ').strip()
         except (EOFError, KeyboardInterrupt):
+            print('\nGame aborted.')
+            return
+        if move.lower() == 'q':
             print('\nGame aborted.')
             return
         if not move:
             continue
-        if move.lower() == 'q':
-            print('\nGame aborted.')
-            return
+
         try:
             frm, to, n = parse_move(move)
-            msg = board.apply_move(player, frm, to, n)
+            board.apply_move(player, frm, to, n)
         except Exception as exc:
             print(f'Illegal move: {exc}\n')
             continue
 
-        # win check
+        # ----- win check
         opp_guard_pos = board.find_guard(opponent[player])
         if opp_guard_pos is None:
             board.draw()
@@ -257,8 +322,10 @@ def main():
             print(f'\n{("Blue" if player=="b" else "Red")} wins by reaching the castle!')
             return
 
-        player = opponent[player]   # switch turn
+        player = opponent[player]   # next turn
         print()
+
 
 if __name__ == '__main__':
     main()
+
