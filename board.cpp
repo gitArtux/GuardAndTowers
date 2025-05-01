@@ -7,13 +7,11 @@
 //------------------------------------------
 
 
-
 /*
 TODO: Think about return types for performance
 TODO: Think about static class vs no class
 TODO: Think about C-style array vs std::array 
 
-TODO: carful to not use vectorization (SIMD) due to overhead
 */
 
 
@@ -24,8 +22,10 @@ class Board {
 
     private:
         // BOARD REPRESENTATION -----------------------------------------------------------------------------------------------
-        static uint64_t figuresB;
-        static uint64_t figuresR;
+        alignas(64) static uint64_t figuresB[6];
+        alignas(64) static uint64_t figuresR[6];
+
+
 
         // guards are on index 0
         alignas(64) static uint64_t l_figuresB[8];
@@ -83,10 +83,49 @@ class Board {
         static constexpr uint64_t MASK_6UP    = 0b000000000000000000000000000000000000000000000000000000111;
         static constexpr uint64_t MASK_6DOWN  = 0b000000000000000111111100000000000000000000000000000000000;
 
-        alignas(64) static constexpr uint64_t MASK_RIGHT[6] = {MASK_1RIGHT, MASK_2RIGHT, MASK_3RIGHT, MASK_4RIGHT, MASK_5RIGHT, MASK_6RIGHT};
-        alignas(64) static constexpr uint64_t MASK_LEFT[6]  = {MASK_1LEFT,  MASK_2LEFT,  MASK_3LEFT,  MASK_4LEFT,  MASK_5LEFT,  MASK_6LEFT};
-        alignas(64) static constexpr uint64_t MASK_UP[6]    = {MASK_1UP,    MASK_2UP,    MASK_3UP,    MASK_4UP,    MASK_5UP,    MASK_6UP};
-        alignas(64) static constexpr uint64_t MASK_DOWN[6]  = {MASK_1DOWN,  MASK_2DOWN,  MASK_3DOWN,  MASK_4DOWN,  MASK_5DOWN,  MASK_6DOWN};
+        static constexpr int MOVE_DIMENSION = 4; // 0=right, 1=left, 2=up, 3=down 
+        static constexpr int MOVE_SIZE = 6; // --> loop [0..5]
+
+        // MOVE MASKS --------------------------------------------------------------------------------------------------
+        // padding in second dimension for optimal caching
+        alignas(64) static constexpr uint64_t MASK_MOVE[4][8] = {
+            {MASK_1RIGHT, MASK_2RIGHT, MASK_3RIGHT, MASK_4RIGHT, MASK_5RIGHT, MASK_6RIGHT,0,0},
+            {MASK_1LEFT, MASK_2LEFT, MASK_3LEFT, MASK_4LEFT, MASK_5LEFT, MASK_6LEFT,0,0},
+            {MASK_1UP, MASK_2UP, MASK_3UP, MASK_4UP, MASK_5UP, MASK_6UP,0,0},
+            {MASK_1DOWN, MASK_2DOWN, MASK_3DOWN, MASK_4DOWN, MASK_5DOWN, MASK_6DOWN,0,0}
+        };
+
+        // MOVE APPLICATION MASKS --------------------------------------------------------------------------------------------------
+        static constexpr int SHIFT_1RIGHT = -1; // 1 right
+        static constexpr int SHIFT_1LEFT  = 1; // 1 left
+        static constexpr int SHIFT_1UP    = 7; // 1 up
+        static constexpr int SHIFT_1DOWN  = -7; // 1 down
+
+        static constexpr int SHIFT_2RIGHT = -2; // 2 right
+        static constexpr int SHIFT_2LEFT  = 2; // 2 left
+        static constexpr int SHIFT_2UP    = 14; // 2 up
+        static constexpr int SHIFT_2DOWN  = -14; // 2 down
+
+        static constexpr int SHIFT_3RIGHT = -3; // 3 right
+        static constexpr int SHIFT_3LEFT  = 3; // 3 left
+        static constexpr int SHIFT_3UP    = 21; // 3 up
+        static constexpr int SHIFT_3DOWN  = -21; // 3 down
+
+        static constexpr int SHIFT_4RIGHT = -4; // 4 right
+        static constexpr int SHIFT_4LEFT  = 4; // 4 left
+        static constexpr int SHIFT_4UP    = 28; // 4 up
+        static constexpr int SHIFT_4DOWN  = -28; // 4 down
+
+        static constexpr int SHIFT_5RIGHT = -5; // 5 right
+        static constexpr int SHIFT_5LEFT  = 5; // 5 left
+        static constexpr int SHIFT_5UP    = 35; // 5 up
+        static constexpr int SHIFT_5DOWN  = -35; // 5 down
+
+        static constexpr int SHIFT_6RIGHT = -6; // 6 right
+        static constexpr int SHIFT_6LEFT  = 6; // 6 left
+        static constexpr int SHIFT_6UP    = 42; // 6 up
+        static constexpr int SHIFT_6DOWN  = -42; // 6 down
+        //------------------------------------------------------------------------------------------------------------	
 
         // Figure types/height
         static constexpr uint8_t TYPE_INDEX = 61;
@@ -102,7 +141,7 @@ class Board {
         alignas(64) static constexpr uint64_t MASK_TYPE[8] = {MASK_1, MASK_2, MASK_3, MASK_4, MASK_5, MASK_6, MASK_7, MASK_G};
 
         // Board Mask
-        static constexpr uint64_t MASK_FIGURE_TYPE = 0b111ULL << TYPE_INDEX; 
+        static constexpr uint64_t MASK_FIGURE_TYPE = 7ULL << TYPE_INDEX; 
         static constexpr uint64_t MASK_BOARD = (1ULL << 49) - 1;
         //------------------------------------------------------------------------------------------------------------
 
@@ -110,8 +149,8 @@ class Board {
     public:   
         static void init_board() {
             // Reset the board to its initial state
-            figuresB = 0b0000000000000000000000000000000000000000000000100000101001101011;
-            figuresR = 0b0000000000000001101011001010000010000000000000000000000000000000;
+            figuresB[0] = 0b0000000000000000000000000000000000000000000000100000101001101011;
+            figuresR[0] = 0b0000000000000001101011001010000010000000000000000000000000000000;
             
             // guards are on index 0
             // Initialize l_figuresB
@@ -138,8 +177,18 @@ class Board {
             depth = 0; // Initialize depth for alpha-beta pruning
         }
 
-        static void move_generation(int depth) {
-            // Implement the move generation logic here
+        static void move_generation(bool isBlue) {
+            if (isBlue){
+                uint64_t* l_figures = l_figuresB;
+            } else {
+                uint64_t* l_figures = l_figuresR;
+            }
+
+            for (int d = 0; d < MOVE_DIMENSION; ++d) {   
+                for (int s = 0; s < MOVE_SIZE; ++s) {
+                    // TODO
+                }
+            }
         }
 
         static void move(uint64_t from, uint64_t to) {
@@ -169,13 +218,13 @@ class Board {
             // Fill the board with the figures
           
             for (int l = 0; l < 2; ++l){
-                uint64_t* figures = (l == 0) ? l_figuresB : l_figuresR; // Pointer to the current player's figures
+                uint64_t* l_figures = (l == 0) ? l_figuresB : l_figuresR; // Pointer to the current player's figures
                 for (int k = 0; k < 8; ++k) {
-                    uint8_t pos = figures[k] ? static_cast<uint8_t>(__builtin_ctzll(figures[k])) : 0; // Use __builtin_ctzll for 64-bit integers
+                    uint8_t pos = l_figures[k] ? static_cast<uint8_t>(__builtin_ctzll(l_figures[k])) : 0; // Use __builtin_ctzll for 64-bit integers
                     x =  6 - (pos % 7); // Column
                     y =  6 - (pos / 7); // Row  
                     for (int i = 0; i < 8; ++i) {
-                        if ((figures[k] & MASK_TYPE[i]) == MASK_TYPE[i]) {
+                        if ((l_figures[k] & MASK_TYPE[i]) == MASK_TYPE[i]) {
                             if (i + 1 == 8) {
                                 type = "G"; // Guard
                             } else {
@@ -208,8 +257,9 @@ class Board {
         }
 };
 
-uint64_t Board::figuresB;
-uint64_t Board::figuresR;
+// Initialize static members during compile time
+uint64_t Board::figuresB[6];
+uint64_t Board::figuresR[6];
 uint64_t Board::l_figuresB[8];
 uint64_t Board::l_figuresR[8];
 int Board::depth = 0;
@@ -218,7 +268,17 @@ uint64_t moves[Board::MAX_DEPTH][Board::MAX_MOVES];
 uint64_t move_stack[Board::MAX_DEPTH][2];
 
 int main() {  
-    Board::init_board(); // Initialize the board
-    Board::print_board(); // Print the board
+    #ifdef _AVX512F_
+    std::cout << "AVX-512 is supported\n";
+    #elif defined(_AVX2_)
+        std::cout << "AVX2 is supported\n";
+    #elif defined(_AVX_)
+        std::cout << "AVX is supported\n";
+    #elif defined(_SSE4_2_)
+        std::cout << "SSE4.2 is supported\n";
+    #elif defined(_SSE2_)
+        std::cout << "SSE2 is supported\n";
+    #endif
+
     return 0;
 }
