@@ -46,5 +46,10 @@ we almost entirely work with free static variables,
  The normal Figure are not seperatedly saved / do not own their own uint64_t. \
  ### figuresB/ figuresR:
  - Array containg 1 uint64_t for every possible height, eg length 7
- - Example: A figure of height 3 has its position marked in the 3 uint64 in of the array. Its bit is set in figuresX[0], figuresX[1], figuresX[2]
+ - Example: A figure of height 3 has its position marked in the first 3 uint64s of the array. Its positional bit is set in figuresX[0], figuresX[1], figuresX[2]
+
+ ## Move Generator
+ - loops over the 4 dimesnions in 2 seperate loops one loop for left shifts, the other for right shifts
+ - within the dimension loop --> loop over the step size
+
 
