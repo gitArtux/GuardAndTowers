@@ -4,281 +4,538 @@
 #include <iostream>
 
 
+
+
 //------------------------------------------
 
 
 /*
-TODO: Think about return types for performance
-TODO: Think about static class vs no class
-TODO: Think about C-style array vs std::array 
+@Ben check out the readme
+
+
 
 */
 
 
-class Board {
-    public:
-        static constexpr int MAX_DEPTH = 8; // Max depth for alpha-beta pruning
-        static constexpr int MAX_MOVES = 32;
+/*
+@Arthur / Both
+TODO: think about seperating guard moves from figure moves
+TODO: handle stalemate
+TODO: guard move generator
+TEST
+*/
 
-    private:
-        // BOARD REPRESENTATION -----------------------------------------------------------------------------------------------
-        alignas(64) static uint64_t figuresB[6];
-        alignas(64) static uint64_t figuresR[6];
-
-
-
-        // guards are on index 0
-        alignas(64) static uint64_t l_figuresB[8];
-        alignas(64) static uint64_t l_figuresR[8];
-
-        //------------------------------------------------------------------------------------------------------------
+static constexpr int MAX_DEPTH = 8; // Max depth for alpha-beta pruning
+static constexpr int MAX_MOVES = 32;
 
 
+static constexpr int MOVE_DIMENSION = 4;
+static constexpr int MOVE_SIZE = 6; 
 
-        // ALPHA-BETA PRUNING -----------------------------------------------------------------------------------------------
-        // TODO: define MAX_DEAPTH
-        // TODO: C-style array or std::array?
-        
-        static int depth;
-        alignas(64) static uint64_t moves[MAX_DEPTH][MAX_MOVES];
-        static uint64_t move_stack[MAX_DEPTH][2];
-        //------------------------------------------------------------------------------------------------------------
+// BOARD REPRESENTATION -----------------------------------------------------------------------------------------------
+static std::uint64_t figuresB[7]; // set meta 0 ! --> set only the positions
+static std::uint64_t figuresR[7]; // set meta 0 ! --> set only the positions
+static std::uint64_t guardB; 
+static std::uint64_t guardR; 
 
-        
-        // SHIFTS -------------------------------------------------------------------------------------------------------------------
-        // TODO: shifts for move calculation
+static std::uint64_t startpos; // Remaining startpos // ! set meta 0 ! --> set only the positions
+static std::uint64_t endpos; // Remaining endpos, contains in meta the stack height
+static std::uint64_t leaving_height; // Temporary variable for the current player
 
-        //-------------------------------------------------------------------------------------------------------------------------
+static std::uint64_t from; // Only 1 figure
+static std::uint64_t to; // Only 1 figure
 
-        // MASKS -------------------------------------------------------------------------------------------------------------------
-        // TODO: set up the masks for the move calculation
-        // TODO: reorganize for the different dimensions for early stoppings
-        static constexpr uint64_t MASK_1RIGHT = 0b000000000000000111111011111101111110111111011111101111110;
-        static constexpr uint64_t MASK_1LEFT  = 0b000000000000000011111101111110111111011111101111110111111;
-        static constexpr uint64_t MASK_1UP    = 0b000000000000000000000011111111111111111111111111111111111;
-        static constexpr uint64_t MASK_1DOWN  = 0b000000000000000111111111111111111111111111111111111111111;
-
-        static constexpr uint64_t MASK_2RIGHT = 0b000000000000000111110011111001111100111110011111001111100;
-        static constexpr uint64_t MASK_2LEFT  = 0b000000000000000001111101111110111111011111101111110111111;
-        static constexpr uint64_t MASK_2UP    = 0b000000000000000000000000000000111111111111111111111111111;
-        static constexpr uint64_t MASK_2DOWN  = 0b000000000000000111111111111111111111111111111111000000000;
-
-        static constexpr uint64_t MASK_3RIGHT = 0b000000000000000111100011110001111000111100011110001111000;
-        static constexpr uint64_t MASK_3LEFT  = 0b000000000000000000111101111110111111011111101111110111111;
-        static constexpr uint64_t MASK_3UP    = 0b000000000000000000000000000000000000011111111111111111111;
-        static constexpr uint64_t MASK_3DOWN  = 0b000000000000000111111111111111111111000000000000000000000;
-
-        static constexpr uint64_t MASK_4RIGHT = 0b000000000000000111000011100001110000111000011100001110000;
-        static constexpr uint64_t MASK_4LEFT  = 0b000000000000000000011101111110111111011111101111110111111;
-        static constexpr uint64_t MASK_4UP    = 0b000000000000000000000000000000000000000000111111111111111;
-        static constexpr uint64_t MASK_4DOWN  = 0b000000000000000111111111111111000000000000000000000000000;
-
-        static constexpr uint64_t MASK_5RIGHT = 0b000000000000000110000011000001100000110000011000001100000;
-        static constexpr uint64_t MASK_5LEFT  = 0b000000000000000000001101111110111111011111101111110111111;
-        static constexpr uint64_t MASK_5UP    = 0b000000000000000000000000000000000000000000000000111111111;
-        static constexpr uint64_t MASK_5DOWN  = 0b000000000000000111111111111111000000000000000000000000000;
-
-        static constexpr uint64_t MASK_6RIGHT = 0b000000000000000100000010000001000000100000010000001000000;
-        static constexpr uint64_t MASK_6LEFT  = 0b000000000000000000000101111110111111011111101111110111111;
-        static constexpr uint64_t MASK_6UP    = 0b000000000000000000000000000000000000000000000000000000111;
-        static constexpr uint64_t MASK_6DOWN  = 0b000000000000000111111100000000000000000000000000000000000;
-
-        static constexpr int MOVE_DIMENSION = 4; // 0=right, 1=left, 2=up, 3=down 
-        static constexpr int MOVE_SIZE = 6; // --> loop [0..5]
-
-        // MOVE MASKS --------------------------------------------------------------------------------------------------
-        // padding in second dimension for optimal caching
-        alignas(64) static constexpr uint64_t MASK_MOVE[4][8] = {
-            {MASK_1RIGHT, MASK_2RIGHT, MASK_3RIGHT, MASK_4RIGHT, MASK_5RIGHT, MASK_6RIGHT,0,0},
-            {MASK_1LEFT, MASK_2LEFT, MASK_3LEFT, MASK_4LEFT, MASK_5LEFT, MASK_6LEFT,0,0},
-            {MASK_1UP, MASK_2UP, MASK_3UP, MASK_4UP, MASK_5UP, MASK_6UP,0,0},
-            {MASK_1DOWN, MASK_2DOWN, MASK_3DOWN, MASK_4DOWN, MASK_5DOWN, MASK_6DOWN,0,0}
-        };
-
-        // MOVE APPLICATION MASKS --------------------------------------------------------------------------------------------------
-        static constexpr int SHIFT_1RIGHT = -1; // 1 right
-        static constexpr int SHIFT_1LEFT  = 1; // 1 left
-        static constexpr int SHIFT_1UP    = 7; // 1 up
-        static constexpr int SHIFT_1DOWN  = -7; // 1 down
-
-        static constexpr int SHIFT_2RIGHT = -2; // 2 right
-        static constexpr int SHIFT_2LEFT  = 2; // 2 left
-        static constexpr int SHIFT_2UP    = 14; // 2 up
-        static constexpr int SHIFT_2DOWN  = -14; // 2 down
-
-        static constexpr int SHIFT_3RIGHT = -3; // 3 right
-        static constexpr int SHIFT_3LEFT  = 3; // 3 left
-        static constexpr int SHIFT_3UP    = 21; // 3 up
-        static constexpr int SHIFT_3DOWN  = -21; // 3 down
-
-        static constexpr int SHIFT_4RIGHT = -4; // 4 right
-        static constexpr int SHIFT_4LEFT  = 4; // 4 left
-        static constexpr int SHIFT_4UP    = 28; // 4 up
-        static constexpr int SHIFT_4DOWN  = -28; // 4 down
-
-        static constexpr int SHIFT_5RIGHT = -5; // 5 right
-        static constexpr int SHIFT_5LEFT  = 5; // 5 left
-        static constexpr int SHIFT_5UP    = 35; // 5 up
-        static constexpr int SHIFT_5DOWN  = -35; // 5 down
-
-        static constexpr int SHIFT_6RIGHT = -6; // 6 right
-        static constexpr int SHIFT_6LEFT  = 6; // 6 left
-        static constexpr int SHIFT_6UP    = 42; // 6 up
-        static constexpr int SHIFT_6DOWN  = -42; // 6 down
-        //------------------------------------------------------------------------------------------------------------	
-
-        // Figure types/height
-        static constexpr uint8_t TYPE_INDEX = 61;
-        static constexpr uint64_t MASK_G = 3ULL << TYPE_INDEX-1; // TODO: how to handle guard?
-        static constexpr uint64_t MASK_1 = 1ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_2 = 2ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_3 = 3ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_4 = 4ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_5 = 5ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_6 = 6ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_7 = 7ULL << TYPE_INDEX; 
-
-        alignas(64) static constexpr uint64_t MASK_TYPE[8] = {MASK_1, MASK_2, MASK_3, MASK_4, MASK_5, MASK_6, MASK_7, MASK_G};
-
-        // Board Mask
-        static constexpr uint64_t MASK_FIGURE_TYPE = 7ULL << TYPE_INDEX; 
-        static constexpr uint64_t MASK_BOARD = (1ULL << 49) - 1;
-        //------------------------------------------------------------------------------------------------------------
+static constexpr std::uint64_t HOMESQUARE_B = 1ULL << 4;
+static constexpr std::uint64_t HOMESQUARE_R = 1ULL << 45;
 
 
-    public:   
-        static void init_board() {
-            // Reset the board to its initial state
-            figuresB[0] = 0b0000000000000000000000000000000000000000000000100000101001101011;
-            figuresR[0] = 0b0000000000000001101011001010000010000000000000000000000000000000;
-            
-            // guards are on index 0
-            // Initialize l_figuresB
-            l_figuresB[0] = 0b0011000000000000000000000000000000000000000000000000000000001000;
-            l_figuresB[1] = 0b0010000000000000000000000000000000000000000000000000000000000001;
-            l_figuresB[2] = 0b0010000000000000000000000000000000000000000000000000000000000010;
-            l_figuresB[3] = 0b0010000000000000000000000000000000000000000000000000000000100000;
-            l_figuresB[4] = 0b0010000000000000000000000000000000000000000000000000000001000000;
-            l_figuresB[5] = 0b0010000000000000000000000000000000000000000000000000001000000000;
-            l_figuresB[6] = 0b0010000000000000000000000000000000000000000000000000100000000000;
-            l_figuresB[7] = 0b0010000000000000000000000000000000000000000000100000000000000000;
 
-            // Initialize l_figuresR
-            l_figuresR[0] = 0b0011000000000000001000000000000000000000000000000000000000000000;
-            l_figuresR[1] = 0b0010000000000001000000000000000000000000000000000000000000000000;
-            l_figuresR[2] = 0b0010000000000000100000000000000000000000000000000000000000000000;
-            l_figuresR[3] = 0b0010000000000000000010000000000000000000000000000000000000000000;
-            l_figuresR[4] = 0b0010000000000000000001000000000000000000000000000000000000000000;
-            l_figuresR[5] = 0b0010000000000000000000001000000000000000000000000000000000000000;
-            l_figuresR[6] = 0b0010000000000000000000000010000000000000000000000000000000000000;
-            l_figuresR[7] = 0b0010000000000000000000000000000010000000000000000000000000000000;
+
+//------------------------------------------------------------------------------------------------------------
+
+// ALPHA-BETA PRUNING -----------------------------------------------------------------------------------------------
+// TODO: define MAX_DEAPTH
+// TODO: C-style array or std::array?
+
+static int depth;
+alignas(64) static std::uint64_t moves[MAX_DEPTH][MOVE_DIMENSION*MOVE_SIZE][2];
+static int adress_count;
+static std::uint64_t move_stack[MAX_DEPTH][2];
+//------------------------------------------------------------------------------------------------------------
+
+
+// SHIFTS -------------------------------------------------------------------------------------------------------------------
+// TODO: shifts for move calculation
+
+//-------------------------------------------------------------------------------------------------------------------------
+
+// MASKS -------------------------------------------------------------------------------------------------------------------
+// TODO: set up the masks for the move calculation
+// TODO: reorganize for the different dimensions for early stoppings
+static constexpr std::uint64_t MASK_1RIGHT = 0b000000000000000111111011111101111110111111011111101111110;
+static constexpr std::uint64_t MASK_1LEFT  = 0b000000000000000011111101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_1UP    = 0b000000000000000000000011111111111111111111111111111111111;
+static constexpr std::uint64_t MASK_1DOWN  = 0b000000000000000111111111111111111111111111111111111111111;
+
+static constexpr std::uint64_t MASK_2RIGHT = 0b000000000000000111110011111001111100111110011111001111100;
+static constexpr std::uint64_t MASK_2LEFT  = 0b000000000000000001111101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_2UP    = 0b000000000000000000000000000000111111111111111111111111111;
+static constexpr std::uint64_t MASK_2DOWN  = 0b000000000000000111111111111111111111111111111111000000000;
+
+static constexpr std::uint64_t MASK_3RIGHT = 0b000000000000000111100011110001111000111100011110001111000;
+static constexpr std::uint64_t MASK_3LEFT  = 0b000000000000000000111101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_3UP    = 0b000000000000000000000000000000000000011111111111111111111;
+static constexpr std::uint64_t MASK_3DOWN  = 0b000000000000000111111111111111111111000000000000000000000;
+
+static constexpr std::uint64_t MASK_4RIGHT = 0b000000000000000111000011100001110000111000011100001110000;
+static constexpr std::uint64_t MASK_4LEFT  = 0b000000000000000000011101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_4UP    = 0b000000000000000000000000000000000000000000111111111111111;
+static constexpr std::uint64_t MASK_4DOWN  = 0b000000000000000111111111111111000000000000000000000000000;
+
+static constexpr std::uint64_t MASK_5RIGHT = 0b000000000000000110000011000001100000110000011000001100000;
+static constexpr std::uint64_t MASK_5LEFT  = 0b000000000000000000001101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_5UP    = 0b000000000000000000000000000000000000000000000000111111111;
+static constexpr std::uint64_t MASK_5DOWN  = 0b000000000000000111111111111111000000000000000000000000000;
+
+static constexpr std::uint64_t MASK_6RIGHT = 0b000000000000000100000010000001000000100000010000001000000;
+static constexpr std::uint64_t MASK_6LEFT  = 0b000000000000000000000101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_6UP    = 0b000000000000000000000000000000000000000000000000000000111;
+static constexpr std::uint64_t MASK_6DOWN  = 0b000000000000000111111100000000000000000000000000000000000;
+
+
+
+// MOVE MASKS --------------------------------------------------------------------------------------------------
+
+static constexpr std::uint64_t MASK_LEFT_MOVES[MOVE_DIMENSION][MOVE_SIZE] = {
+    {MASK_1LEFT, MASK_2LEFT, MASK_3LEFT, MASK_4LEFT, MASK_5LEFT, MASK_6LEFT},
+    {MASK_1UP, MASK_2UP, MASK_3UP, MASK_4UP, MASK_5UP, MASK_6UP}
+};
+
+static constexpr std::uint64_t MASK_RIGHT_MOVES[MOVE_DIMENSION][MOVE_SIZE] = {
+    {MASK_1RIGHT, MASK_2RIGHT, MASK_3RIGHT, MASK_4RIGHT, MASK_5RIGHT, MASK_6RIGHT},
+    {MASK_1DOWN, MASK_2DOWN, MASK_3DOWN, MASK_4DOWN, MASK_5DOWN, MASK_6DOWN}
+};
+
+// SHIFT APPLICATION MASKS --------------------------------------------------------------------------------------------------
+
+static constexpr int SHIFT_1HORIZONTAL = 1;  // 1 horizontal
+static constexpr int SHIFT_2HORIZONTAL = 2;  // 2 horizontal
+static constexpr int SHIFT_3HORIZONTAL = 3;  // 3 horizontal
+static constexpr int SHIFT_4HORIZONTAL = 4;  // 4 horizontal
+static constexpr int SHIFT_5HORIZONTAL = 5;  // 5 horizontal
+static constexpr int SHIFT_6HORIZONTAL = 6;  // 6 horizontal
+
+static constexpr int SHIFT_1VERTICAL   = 7;  // 1 vertical
+static constexpr int SHIFT_2VERTICAL   = 14; // 2 vertical
+static constexpr int SHIFT_3VERTICAL   = 21; // 3 vertical
+static constexpr int SHIFT_4VERTICAL   = 28; // 4 vertical
+static constexpr int SHIFT_5VERTICAL   = 35; // 5 vertical
+static constexpr int SHIFT_6VERTICAL   = 42; // 6 vertical
+
+
+static constexpr int SHIFTS[MOVE_DIMENSION-2][MOVE_SIZE] = {
+    {SHIFT_1HORIZONTAL, SHIFT_2HORIZONTAL, SHIFT_3HORIZONTAL, SHIFT_4HORIZONTAL, SHIFT_5HORIZONTAL, SHIFT_6HORIZONTAL},
+    {SHIFT_1VERTICAL, SHIFT_2VERTICAL, SHIFT_3VERTICAL, SHIFT_4VERTICAL, SHIFT_5VERTICAL, SHIFT_6VERTICAL} 
+};
+
+//------------------------------------------------------------------------------------------------------------
+
+// Figure types/height
+static constexpr uint8_t TYPE_INDEX = 61;
+static constexpr std::uint64_t MASK_1 = 1ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_2 = 2ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_3 = 3ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_4 = 4ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_5 = 5ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_6 = 6ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_7 = 7ULL << TYPE_INDEX; 
+
+static constexpr std::uint64_t MASK_STACKHEIGHT = 7ULL << TYPE_INDEX; // TODO: how to handle guard?
+static constexpr std::uint64_t MASK_TYPE[7]={MASK_1, MASK_2, MASK_3, MASK_4, MASK_5, MASK_6, MASK_7};
+
+// Board Mask
+static constexpr std::uint64_t MASK_FIGURE_TYPE = 7ULL << TYPE_INDEX; 
+static constexpr std::uint64_t MASK_BOARD = (1ULL << 49) - 1;
+//------------------------------------------------------------------------------------------------------------
+
+
+ 
+static void init_board() {
+    // Reset the board to its initial state
+    figuresB[0] = 0b0000000000000000000000000000000000000000000000100000101001100011;
+    figuresB[1] = 0;
+    figuresB[2] = 0;
+    figuresB[3] = 0;    
+    figuresB[4] = 0;
+    figuresB[5] = 0;
+    figuresB[6] = 0;
+
+    figuresR[0] = 0b0000000000000001100011001010000010000000000000000000000000000000;
+    figuresR[1] = 0;
+    figuresR[2] = 0;
+    figuresR[3] = 0;
+    figuresR[4] = 0;
+    figuresR[5] = 0;
+    figuresR[6] = 0;
+
+
+    guardB = 0b0000000000000000000000000000000000000000000000000000000000001000;
+    guardR = 0b0000000000000000001000000000000000000000000000000000000000000000;
+                
+    depth = 0; // Initialize depth for alpha-beta pruning
+}
+
+static void move_generationB() {
+    adress_count = 0; // Reset adress count for the new generation
     
-                        
-            depth = 0; // Initialize depth for alpha-beta pruning
-        }
+    // LEFT MOVES ---------------------------------------------
+    // Itereate over 4 dimensions
+    for (int d = 0; d < MOVE_DIMENSION-2; ++d) {   
+        // For Figures B
+        // Iterate over 6 possible move sizes
+        for (int s = 0; s < MOVE_SIZE; ++s) {
 
-        static void move_generation(bool isBlue) {
-            if (isBlue){
-                uint64_t* l_figures = l_figuresB;
-            } else {
-                uint64_t* l_figures = l_figuresR;
-            }
+            // Check wether figure with step size exists
+            if (figuresB[s]){
+                // select figuresB with step size s and calc enpos
+                startpos = figuresB[s] & MASK_LEFT_MOVES[d][s];
 
-            for (int d = 0; d < MOVE_DIMENSION; ++d) {   
-                for (int s = 0; s < MOVE_SIZE; ++s) {
-                    // TODO
+                // check if any figures in mask
+                if (!startpos) break;
+        
+                // create endpos
+                endpos = startpos << SHIFTS[d][s];
+                
+                // check for higher enemy stacks and the own guard on endpos
+                endpos &= ~(endpos & (figuresR[s+1] | guardB));
+
+                // check for empty moves
+                if (endpos){
+                    startpos = endpos >> SHIFTS[d][s]; // set the startpos accordingly to the endpos 
+
+                    // store the move in the moves array
+                    moves[depth][adress_count][0] = startpos; 
+                    moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
+                    adress_count ++;
                 }
+
+                // stop criteria for blocked dimension
+                else break;
+
             }
+
+            // stop criteria for non existing stack height
+            else break;
         }
+       
+    }
 
-        static void move(uint64_t from, uint64_t to) {
-            // Implement the move logic here
-        }
+    // RIGHT MOVES ---------------------------------------------    
+    // Itereate over 4 dimensions
+    for (int d = 0; d < MOVE_DIMENSION-2; ++d) {   
+        // For Figures B
+        // Iterate over 6 possible move sizes
+        for (int s = 0; s < MOVE_SIZE; ++s) {
 
-        static void undo() {
-            // Implement the undo logic here
-        }
+            // Check wether figure with step size exists
+            if (figuresB[s]){
+                // select figuresB with step size s and calc enpos
+                startpos = figuresB[s] & MASK_RIGHT_MOVES[d][s];
 
+                // check if any figures in mask
+                if (!startpos) break;
+        
+                // create endpos
+                endpos = startpos >> SHIFTS[d][s];
+                
+                // check for higher enemy stacks and the own guard on endpos
+                endpos &= ~(endpos & (figuresR[s+1] | guardB));
 
-        static void pick_move() {
-            // Implement the move picking logic here
-        }
+                // check for empty moves
+                if (endpos){
+                    startpos = endpos << SHIFTS[d][s]; // set the startpos accordingly to the endpos 
 
-        static void print_board() {
-            // Empty==0, Blue>0, Red<0
-            std::string board[7][7];
-            for (int i = 0; i < 7; ++i) {
-                for (int j = 0; j < 7; ++j) {
-                    board[i][j] = "| ";
+                    // store the move in the moves array
+                    moves[depth][adress_count][0] = startpos; 
+                    moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
+                    adress_count ++;
                 }
+
+                // stop criteria for blocked dimension
+                else break;
+
             }
-            std::string type = " "; // guard=8
-            uint8_t x = 0;
-            uint8_t y = 0;
-            // Fill the board with the figures
-          
-            for (int l = 0; l < 2; ++l){
-                uint64_t* l_figures = (l == 0) ? l_figuresB : l_figuresR; // Pointer to the current player's figures
-                for (int k = 0; k < 8; ++k) {
-                    uint8_t pos = l_figures[k] ? static_cast<uint8_t>(__builtin_ctzll(l_figures[k])) : 0; // Use __builtin_ctzll for 64-bit integers
+
+            // stop criteria for non existing stack height
+            else break;
+        }
+        
+    }
+
+    
+}
+
+static void move_generationR() {
+    adress_count = 0; // Reset adress count for the new generation
+    
+    // LEFT MOVES ---------------------------------------------
+    // Itereate over 4 dimensions
+    for (int d = 0; d < MOVE_DIMENSION-2; ++d) {   
+        // For Figures R
+        // Iterate over 6 possible move sizes
+        for (int s = 0; s < MOVE_SIZE; ++s) {
+
+            // Check wether figure with step size exists
+            if (figuresR[s]){
+                // select figuresR with step size s and calc enpos
+                startpos = figuresR[s] & MASK_LEFT_MOVES[d][s];
+
+                // check if any figures in mask
+                if (!startpos) break;
+        
+                // create endpos
+                endpos = startpos << SHIFTS[d][s];
+                
+                // check for higher enemy stacks and the own guard on endpos
+                endpos &= ~(endpos & (figuresB[s+1] | guardR));
+
+                // check for empty moves
+                if (endpos){
+                    startpos = endpos >> SHIFTS[d][s]; // set the startpos accordingly to the endpos 
+
+                    // store the move in the moves array
+                    moves[depth][adress_count][0] = startpos; 
+                    moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
+                    adress_count ++;
+                }
+
+                // stop criteria for blocked dimension
+                else break;
+
+            }
+
+            // stop criteria for non existing stack height
+            else break;
+        }
+       
+    }
+
+    // RIGHT MOVES ---------------------------------------------    
+    // Itereate over 4 dimensions
+    for (int d = 0; d < MOVE_DIMENSION-2; ++d) {   
+        // For Figures R
+        // Iterate over 6 possible move sizes
+        for (int s = 0; s < MOVE_SIZE; ++s) {
+
+            // Check wether figure with step size exists
+            if (figuresR[s]){
+                // select figuresR with step size s and calc enpos
+                startpos = figuresR[s] & MASK_RIGHT_MOVES[d][s];
+
+                // check if any figures in mask
+                if (!startpos) break;
+
+                // create endpos
+                endpos = startpos >> SHIFTS[d][s];
+
+                // check for higher enemy stacks and the own guard on endpos
+                endpos &= ~(endpos & (figuresB[s+1] | guardR));
+
+                //check for empty moves
+                if (endpos){
+                    startpos = endpos << SHIFTS[d][s]; // set the startpos accordingly to the endpos 
+
+                    // store the move in the moves array
+                    moves[depth][adress_count][0] = startpos; 
+                    moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
+                    adress_count ++;
+                }
+
+                // stop criteria for blocked dimension
+                else break;
+            }
+
+            // stop criteria for non existing stack height
+            else break;
+        }
+    }
+}
+
+inline static bool moveB() {
+    // Check Wincondition Opponent guard hit
+    if (to & guardR) return true;
+
+    // Move guard
+    if (from & guardB) {
+        // Check Wincondition Guard on opponent home square
+        if (to & HOMESQUARE_R) return true; 
+        guardB = to; // Move the guard to the new position (guard has height 1)
+    }
+    else {
+        leaving_height = (to & MASK_STACKHEIGHT >> TYPE_INDEX); 
+
+        // Remove the positions from the origin position
+        for (int i = 0; i < 7; ++i) {
+            if (!(from & figuresB[i])) {
+                for (int l = 1; l <= leaving_height; ++l) {
+                    figuresB[i-l] &= ~from; 
+                }
+                break;
+            }
+        }
+
+        // Add the positions to the destination position
+        to = to & MASK_BOARD; // Remove the stack height from the to position
+        for (int i = 0; i < 7; ++i) {
+            if (!(to & figuresB[i])) {
+                for (int l = 0; l < leaving_height; ++l) {
+                    figuresB[i+l] |= to; 
+                }
+                break;
+            }
+        }
+    }
+    // Remove enemy figure 
+    if (to & figuresR[0]) {
+        for (int i = 0; i < 7; ++i) {
+            if (!(figuresR[i] & to)) break;
+            figuresR[i] &= ~to;
+        }
+    }
+    return false;
+}
+
+
+inline static bool moveR() {
+    // Check Wincondition Opponent guard hit
+    if (to & guardB) return true;
+
+    // Move guard
+    if (from & guardR) {
+        // Check Wincondition Guard on opponent home square
+        if (to & HOMESQUARE_B) return true; 
+        guardR = to; // Move the guard to the new position (guard has height 1)
+    }
+    else {
+        leaving_height = (to & MASK_STACKHEIGHT >> TYPE_INDEX); 
+
+        // Remove the positions from the origin position
+        for (int i = 0; i < 7; ++i) {
+            if (!(from & figuresR[i])) {
+                for (int l = 1; l <= leaving_height; ++l) {
+                    figuresR[i-l] &= ~from; 
+                }
+                break;
+            }
+        }
+
+        // Add the positions to the destination position
+        to = to & MASK_BOARD; // Remove the stack height from the to position
+        for (int i = 0; i < 7; ++i) {
+            if (!(to & figuresR[i])) {
+                for (int l = 0; l < leaving_height; ++l) {
+                    figuresR[i+l] |= to; 
+                }
+                break;
+            }
+        }
+    }
+    // Remove enemy figure 
+    if (to & figuresB[0]) {
+        for (int i = 0; i < 7; ++i) {
+            if (!(figuresB[i] & to)) break;
+            figuresB[i] &= ~to;
+        }
+    }
+    return false;
+}
+
+
+static void undo() {
+    // Implement the undo logic here
+}
+
+// TODO in caller function: while (startpos)
+inline static void extract_move() {
+    from = 1ULL << __builtin_ctzll(startpos) ; 
+    to = 1ULL << __builtin_ctzll(endpos) | MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
+    startpos &= startpos - 1; // Clear the lowest set bit
+    endpos &= endpos - 1; // Clear the lowest set bit
+}
+
+
+// Pinting and String Operations -----------------------------------------------------------------------------------
+static void print_board() {
+    // Empty==0, Blue>0, Red<0
+    std::string board[7][7];
+    for (int i = 0; i < 7; ++i) {
+        for (int j = 0; j < 7; ++j) {
+            board[i][j] = "\033[4m| \033[0m";
+        }
+    }
+    std::string type = " "; 
+    uint8_t x = 0;
+    uint8_t y = 0;
+    int pos;
+
+    // Fill the board 
+    for (int l = 0; l < 2; ++l){
+        // FIGURES
+        std::uint64_t* figures = (l == 0) ? figuresB : figuresR;
+        for(int h = 0; h < 7; ++h) {
+            if (figures[h]){
+                uint64_t temp = figures[h];
+                while(temp) {
+                    pos = __builtin_ctzll(temp);
+                    temp &= temp - 1; 
                     x =  6 - (pos % 7); // Column
                     y =  6 - (pos / 7); // Row  
-                    for (int i = 0; i < 8; ++i) {
-                        if ((l_figures[k] & MASK_TYPE[i]) == MASK_TYPE[i]) {
-                            if (i + 1 == 8) {
-                                type = "G"; // Guard
-                            } else {
-                                type = std::to_string(i + 1); // Convert to string
-                            }
-                            
-                            if (l == 0) {
-                                board[y][x] = "|\033[34m" + type + "\033[0m"; // Blue   
-                            } else {
-                                board[y][x] = "|\033[31m" + type + "\033[0m"; // Red 
-                            }
-                        } 
+                    type = std::to_string(h + 1); // Convert to string
+                    if (l == 0) {
+                        board[y][x] = "\033[4m|\033[34m" + type + "\033[0m"; // Blue   
+                    } else {
+                        board[y][x] = "\033[4m|\033[31m" + type + "\033[0m"; // Red 
                     }
                 }
             }
-            // BLUE: \033[34m \033[0m
-            // RED: \033[31m \033[0m
-            // underline: \033[4m \033[0m
-
-            // Print the board
-            for (int i = 0; i < 7; ++i) {
-                char letter = 'G' - i; // Convert index to letter
-                std::cout << letter << "  "; 
-                for (int j = 0; j < 7; ++j) {
-                    std::cout << board[i][j]; 
-                }
-                std::cout << "|" << "\n";
-            }
-            std::cout << "\n" << "    1 2 3 4 5 6 7 " << std::endl; // Column numbers
         }
-};
+        // GUARD
+        std::uint64_t guard = (l == 0) ? guardB : guardR; // Pointer to the current player's figures
+        pos = __builtin_ctzll(guard);
+        x =  6 - (pos % 7); // Column
+        y =  6 - (pos / 7); // Row  
+        if (l == 0) {
+            board[y][x] = "\033[4m|\033[34mG\033[0m"; // Blue   
+        } else {
+            board[y][x] = "\033[4m|\033[31mG\033[0m"; // Red 
+        }
+    }
+    // BLUE: \033[34m \033[0m
+    // RED: \033[31m \033[0m
+    // underline: \033[4m \033[0m
 
-// Initialize static members during compile time
-uint64_t Board::figuresB[6];
-uint64_t Board::figuresR[6];
-uint64_t Board::l_figuresB[8];
-uint64_t Board::l_figuresR[8];
-int Board::depth = 0;
+    // Print the board
+    std::cout << "   \033[4mBlues Turn     \033[0m" << "\n";
+    for (int i = 0; i < 7; ++i) {
+        char letter = 'G' - i; // Convert index to letter
+        std::cout << letter << "  "; 
+        for (int j = 0; j < 7; ++j) {
+            std::cout << board[i][j]; 
+        }
+        std::cout << "\033[4m|\033[0m" << "\n";
+    }
+    std::cout << "\n" << "    1 2 3 4 5 6 7 " << std::endl; // Column numbers
+}
 
-uint64_t moves[Board::MAX_DEPTH][Board::MAX_MOVES];
-uint64_t move_stack[Board::MAX_DEPTH][2];
+
+
+// Initialize static members ------------------------------------------------------------------------------------
+// (necessary for static members in a class)
+
 
 int main() {  
-    #ifdef _AVX512F_
-    std::cout << "AVX-512 is supported\n";
-    #elif defined(_AVX2_)
-        std::cout << "AVX2 is supported\n";
-    #elif defined(_AVX_)
-        std::cout << "AVX is supported\n";
-    #elif defined(_SSE4_2_)
-        std::cout << "SSE4.2 is supported\n";
-    #elif defined(_SSE2_)
-        std::cout << "SSE2 is supported\n";
-    #endif
+    init_board(); // Initialize the board
+    print_board(); // Print the initial board state
 
-    return 0;
+return 0;
 }
