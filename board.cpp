@@ -557,12 +557,6 @@ static void print_Bitboard(std::uint64_t bitboard) {
     std::cout << "Bitboard: " << std::bitset<64>(bitboard) << std::endl; // Print the bitboard in binary format
 }
 
-static void user_move() {
-    std::string input;
-    std::cout << "Enter your move (e.g., A1-B2-1): ";
-    std::cin >> input; // Get user input
-
-}
 
 int main() {  
     init_board(); // Initialize the board
