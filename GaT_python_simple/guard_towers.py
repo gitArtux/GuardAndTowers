@@ -1,39 +1,8 @@
-
-"""
-Guard & Towers – terminal edition
-Author: ChatGPT
-The program implements the complete rule‑set described in the PDF (© 1997 Christoph Endres & Robert Wirth).
-
-How to play
------------
-Run     python guard_towers.py
-
-The board is printed on every turn.  
-Blue (b) moves first by convention, but you can easily flip that in `main()`.
-
-Enter moves in the form
-
-    FROM-TO            (for a guard or for moving a *whole* tower)
-    FROM-TO-N          (to move N stones off the *top* of a taller tower)
-
-Examples:
-    D1-D2              – move blue guard from D1 to D2
-    A7-A6-1            – move 1 soldier from the red tower at A7 to A6
-    F7-D7              – red guard captures blue guard at D7 (winning)
-
-Coordinates use   A‑G  for files (columns) from left to right,  
-and              1‑7  for ranks (rows) from bottom to top.
-
-The game ends immediately when a guard is captured or when a guard occupies
-the opposing castle square (D1 for red, D7 for blue).
-
-Enjoy!
-"""
-
-
 import sys
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
+
+import numpy as np
 
 FILES = 'ABCDEFG'
 RANKS = '1234567'
@@ -280,6 +249,7 @@ class Board:
 # Game Loop
 # ---------------------------------------------------------------------------#
 def main():
+    from evaluation import find_best_move
     board = Board()
     player = 'b'           # blue starts
     opponent = {'b': 'r', 'r': 'b'}
@@ -288,18 +258,27 @@ def main():
         board.draw()
         possible_moves = board.generate_moves(player)
         print(f"\nTurn – {'Blue' if player == 'b' else 'Red'}")
-        print("Possible moves:")
+        print("\nPossible moves:")
         print(' '.join(possible_moves) if possible_moves else '(none)')
+
+        best_search_move = find_best_move(board, player)
+        print(f'\nBest AI move: {best_search_move}')
 
         # prompt & parse
         try:
-            move = input('\nEnter move (q to quit): ').strip()
+            move = input('\nEnter move or q(iut), r(andom) b(est AI move): ').strip()
         except (EOFError, KeyboardInterrupt):
             print('\nGame aborted.')
             return
         if move.lower() == 'q':
             print('\nGame aborted.')
             return
+        if move.lower() == 'r':
+            move = np.random.choice(possible_moves)
+            print('\nChose random move: {}'.format(move))
+        if move.lower() == 'b':
+            move = best_search_move
+            print('\nChose best search move: {}'.format(move))
         if not move:
             continue
 

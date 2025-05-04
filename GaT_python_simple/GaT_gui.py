@@ -1,21 +1,3 @@
-# Revised GUI that fixes both issues
-"""
-Guard & Towers – Tkinter GUI (fixed)
-Two fixes requested:
-  1. Tower numbers no longer remain as “ghosts” after moving.
-  2. You can now grab/drag a piece by clicking **anywhere** on it, including the number.
-
-Implementation notes
---------------------
-* Every visual element (shape + text) belonging to a single piece now shares
-  a unique tag:   piece_<square>   (e.g. piece_A7).
-* Both elements ALSO carry the generic tag "piece" so the existing bindings
-  still apply.
-* We delete *all* canvas items with tag "piece" before re‑drawing pieces, so
-  nothing lingers behind.
-* During dragging we move the whole group via its unique tag, so text moves
-  in sync with the shape.
-"""
 import tkinter as tk
 from tkinter import messagebox
 from guard_towers import Board, coord_to_xy, xy_to_coord, BOARD_SIZE
