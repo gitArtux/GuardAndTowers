@@ -52,4 +52,3 @@ we almost entirely work with free static variables,
  - loops over the 4 dimesnions in 2 seperate loops one loop for left shifts, the other for right shifts
  - within the dimension loop --> loop over the step size
 
-

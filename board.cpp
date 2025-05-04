@@ -1,7 +1,9 @@
 #include <cstdint>
 
-// Temporary includes for printing
+// Temporary includes for printing and FEN
 #include <iostream>
+#include <bitset>
+
 
 
 
@@ -72,35 +74,30 @@ static std::uint64_t move_stack[MAX_DEPTH][2];
 // MASKS -------------------------------------------------------------------------------------------------------------------
 // TODO: set up the masks for the move calculation
 // TODO: reorganize for the different dimensions for early stoppings
-static constexpr std::uint64_t MASK_1RIGHT = 0b000000000000000111111011111101111110111111011111101111110;
-static constexpr std::uint64_t MASK_1LEFT  = 0b000000000000000011111101111110111111011111101111110111111;
-static constexpr std::uint64_t MASK_1UP    = 0b000000000000000000000011111111111111111111111111111111111;
-static constexpr std::uint64_t MASK_1DOWN  = 0b000000000000000111111111111111111111111111111111111111111;
-
-static constexpr std::uint64_t MASK_2RIGHT = 0b000000000000000111110011111001111100111110011111001111100;
-static constexpr std::uint64_t MASK_2LEFT  = 0b000000000000000001111101111110111111011111101111110111111;
-static constexpr std::uint64_t MASK_2UP    = 0b000000000000000000000000000000111111111111111111111111111;
-static constexpr std::uint64_t MASK_2DOWN  = 0b000000000000000111111111111111111111111111111111000000000;
-
-static constexpr std::uint64_t MASK_3RIGHT = 0b000000000000000111100011110001111000111100011110001111000;
-static constexpr std::uint64_t MASK_3LEFT  = 0b000000000000000000111101111110111111011111101111110111111;
-static constexpr std::uint64_t MASK_3UP    = 0b000000000000000000000000000000000000011111111111111111111;
-static constexpr std::uint64_t MASK_3DOWN  = 0b000000000000000111111111111111111111000000000000000000000;
-
-static constexpr std::uint64_t MASK_4RIGHT = 0b000000000000000111000011100001110000111000011100001110000;
-static constexpr std::uint64_t MASK_4LEFT  = 0b000000000000000000011101111110111111011111101111110111111;
-static constexpr std::uint64_t MASK_4UP    = 0b000000000000000000000000000000000000000000111111111111111;
-static constexpr std::uint64_t MASK_4DOWN  = 0b000000000000000111111111111111000000000000000000000000000;
-
-static constexpr std::uint64_t MASK_5RIGHT = 0b000000000000000110000011000001100000110000011000001100000;
-static constexpr std::uint64_t MASK_5LEFT  = 0b000000000000000000001101111110111111011111101111110111111;
-static constexpr std::uint64_t MASK_5UP    = 0b000000000000000000000000000000000000000000000000111111111;
-static constexpr std::uint64_t MASK_5DOWN  = 0b000000000000000111111111111111000000000000000000000000000;
-
-static constexpr std::uint64_t MASK_6RIGHT = 0b000000000000000100000010000001000000100000010000001000000;
-static constexpr std::uint64_t MASK_6LEFT  = 0b000000000000000000000101111110111111011111101111110111111;
-static constexpr std::uint64_t MASK_6UP    = 0b000000000000000000000000000000000000000000000000000000111;
-static constexpr std::uint64_t MASK_6DOWN  = 0b000000000000000111111100000000000000000000000000000000000;
+static constexpr std::uint64_t MASK_1RIGHT = 0b0000000000000001111110111111011111101111110111111011111101111110;
+static constexpr std::uint64_t MASK_1LEFT  = 0b0000000000000000111111011111101111110111111011111101111110111111;
+static constexpr std::uint64_t MASK_1UP    = 0b0000000000000000000000111111111111111111111111111111111111111111;
+static constexpr std::uint64_t MASK_1DOWN  = 0b0000000000000001111111111111111111111111111111111111111110000000;
+static constexpr std::uint64_t MASK_2RIGHT = 0b0000000000000001111100111110011111001111100111110011111001111100;
+static constexpr std::uint64_t MASK_2LEFT  = 0b0000000000000000011111001111100111110011111001111100111110011111;
+static constexpr std::uint64_t MASK_2UP    = 0b0000000000000000000000000000011111111111111111111111111111111111;
+static constexpr std::uint64_t MASK_2DOWN  = 0b0000000000000001111111111111111111111111111111111100000000000000;
+static constexpr std::uint64_t MASK_3RIGHT = 0b0000000000000001111000111100011110001111000111100011110001111000;
+static constexpr std::uint64_t MASK_3LEFT  = 0b0000000000000000001111000111100011110001111000111100011110001111;
+static constexpr std::uint64_t MASK_3UP    = 0b0000000000000000000000000000000000000111111111111111111111111111;
+static constexpr std::uint64_t MASK_3DOWN  = 0b0000000000000001111111111111111111111111111000000000000000000000;
+static constexpr std::uint64_t MASK_4RIGHT = 0b0000000000000001110000111000011100001110000111000011100001110000;
+static constexpr std::uint64_t MASK_4LEFT  = 0b0000000000000000000111000011100001110000111000011100001110000111;
+static constexpr std::uint64_t MASK_4UP    = 0b0000000000000000000000000000000000000000000111111111111111111111;
+static constexpr std::uint64_t MASK_4DOWN  = 0b0000000000000001111111111111111111110000000000000000000000000000;
+static constexpr std::uint64_t MASK_5RIGHT = 0b0000000000000001100000110000011000001100000110000011000001100000;
+static constexpr std::uint64_t MASK_5LEFT  = 0b0000000000000000000011000001100000110000011000001100000110000011;
+static constexpr std::uint64_t MASK_5UP    = 0b0000000000000000000000000000000000000000000000000011111111111111;
+static constexpr std::uint64_t MASK_5DOWN  = 0b0000000000000001111111111111100000000000000000000000000000000000;
+static constexpr std::uint64_t MASK_6RIGHT = 0b0000000000000001000000100000010000001000000100000010000001000000;
+static constexpr std::uint64_t MASK_6LEFT  = 0b0000000000000000000001000000100000010000001000000100000010000001;
+static constexpr std::uint64_t MASK_6UP    = 0b0000000000000000000000000000000000000000000000000000000001111111;
+static constexpr std::uint64_t MASK_6DOWN  = 0b0000000000000001111111000000000000000000000000000000000000000000;
 
 
 
@@ -216,7 +213,7 @@ static void move_generationB() {
                     // store the move in the moves array
                     moves[depth][adress_count][0] = startpos; 
                     moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
-                    adress_count ++;
+                    ++adress_count;
                 }
 
                 // stop criteria for blocked dimension
@@ -258,7 +255,7 @@ static void move_generationB() {
                     // store the move in the moves array
                     moves[depth][adress_count][0] = startpos; 
                     moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
-                    adress_count ++;
+                    ++adress_count ;
                 }
 
                 // stop criteria for blocked dimension
@@ -306,7 +303,7 @@ static void move_generationR() {
                     // store the move in the moves array
                     moves[depth][adress_count][0] = startpos; 
                     moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
-                    adress_count ++;
+                    ++adress_count;
                 }
 
                 // stop criteria for blocked dimension
@@ -348,7 +345,7 @@ static void move_generationR() {
                     // store the move in the moves array
                     moves[depth][adress_count][0] = startpos; 
                     moves[depth][adress_count][1] = endpos | MASK_TYPE[s]; // set the stack height of the moving part of the figure
-                    adress_count ++;
+                    ++adress_count;
                 }
 
                 // stop criteria for blocked dimension
@@ -372,7 +369,7 @@ inline static bool moveB() {
         guardB = to; // Move the guard to the new position (guard has height 1)
     }
     else {
-        leaving_height = (to & MASK_STACKHEIGHT >> TYPE_INDEX); 
+        leaving_height = ((to & MASK_STACKHEIGHT) >> TYPE_INDEX); 
 
         // Remove the positions from the origin position
         for (int i = 0; i < 7; ++i) {
@@ -405,7 +402,6 @@ inline static bool moveB() {
     return false;
 }
 
-
 inline static bool moveR() {
     // Check Wincondition Opponent guard hit
     if (to & guardB) return true;
@@ -417,7 +413,7 @@ inline static bool moveR() {
         guardR = to; // Move the guard to the new position (guard has height 1)
     }
     else {
-        leaving_height = (to & MASK_STACKHEIGHT >> TYPE_INDEX); 
+        leaving_height = ((to & MASK_STACKHEIGHT) >> TYPE_INDEX); 
 
         // Remove the positions from the origin position
         for (int i = 0; i < 7; ++i) {
@@ -463,6 +459,36 @@ inline static void extract_move() {
     endpos &= endpos - 1; // Clear the lowest set bit
 }
 
+inline static std::string FEN_position(std::uint64_t pos) {
+    uint8_t x = 0;
+    uint8_t y = 0;
+    int index = __builtin_ctzll(pos); // Get the position of the lowest set bit
+    x =  7 - (index % 7); // Column
+    y =  6 - (index / 7); // Row  
+    char letter = 'G' - y;
+    return letter + std::to_string(x); // Convert to string
+}
+
+static void print_FEN_Moves() {
+
+    for(int i = 0; i < MOVE_DIMENSION*MOVE_SIZE; ++i) {
+        if (!moves[depth][i][0]) break; // Stop if no more moves are available
+
+        startpos = moves[depth][i][0]; // Get the start position
+        endpos = moves[depth][i][1]; // Get the end position
+
+        leaving_height = ((endpos & MASK_STACKHEIGHT) >> TYPE_INDEX); // Get the stack height of the moving part of the figure
+
+        while(startpos) {
+            extract_move();
+            
+            std::cout <<  FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) << ", "; // Print the move
+        }
+    }
+    std::cout << std::endl; // Print a new line after all moves
+
+}
+  
 
 // Pinting and String Operations -----------------------------------------------------------------------------------
 static void print_board() {
@@ -526,16 +552,32 @@ static void print_board() {
     }
     std::cout << "\n" << "    1 2 3 4 5 6 7 " << std::endl; // Column numbers
 }
+   
+static void print_Bitboard(std::uint64_t bitboard) {
+    std::cout << "Bitboard: " << std::bitset<64>(bitboard) << std::endl; // Print the bitboard in binary format
+}
 
+static void user_move() {
+    std::string input;
+    std::cout << "Enter your move (e.g., A1-B2-1): ";
+    std::cin >> input; // Get user input
 
-
-// Initialize static members ------------------------------------------------------------------------------------
-// (necessary for static members in a class)
-
+}
 
 int main() {  
     init_board(); // Initialize the board
     print_board(); // Print the initial board state
-
-return 0;
+    // move_generationB(); // Generate moves for player B
+    // print_FEN_Moves(); // Print the generated moves in FEN format
+    move_generationB(); // Generate moves for player B
+    // print_FEN_Moves(); // Print the generated moves in FEN format
+    startpos = moves[depth][0][0]; // Get the start position from the generated moves
+    endpos = moves[depth][0][1]; // Get the end position from the generated moves
+    extract_move(); // Extract the move from the generated moves
+    print_Bitboard(from); // Print the from position in bitboard format
+    print_Bitboard(to); // Print the to position in bitboard format
+    moveB();
+    print_board(); // Print the board after the move
+    std::cin.get();
+    return 0;
 }
