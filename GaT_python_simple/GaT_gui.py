@@ -1,6 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
-from guard_towers import Board, coord_to_xy, xy_to_coord, BOARD_SIZE
+from guard_towers import Board, coord_to_xy, xy_to_coord, BOARD_SIZE, parse_move
+
+import numpy as np
+from evaluation import find_best_move
+import threading
 
 SQUARE = 80
 LIGHT = "#F0D9B5"
@@ -22,11 +26,20 @@ class GameGUI:
                                 width=SQUARE*BOARD_SIZE,
                                 height=SQUARE*BOARD_SIZE,
                                 highlightthickness=0)
-        self.canvas.grid(row=0, column=0, padx=10, pady=10)
+        self.canvas.grid(row=0, column=0, rowspan=BOARD_SIZE, padx=10, pady=10)
 
         self.status = tk.StringVar(value="Turn: Blue")
         tk.Label(root, textvariable=self.status,
                  font=("Arial", 14)).grid(row=0, column=1, sticky="n")
+
+        self.random_button = tk.Button(root, text="Random Move", command=self.random_move)
+        self.random_button.grid(row=1, column=1, sticky="n", pady=5)
+
+        self.best_button = tk.Button(root, text="Best AI Move", command=self.best_ai_move)
+        self.best_button.grid(row=2, column=1, sticky="n", pady=5)
+
+        self.best_move_label = tk.Label(root, text="AI Move: None", font=("Arial", 14))
+        self.best_move_label.grid(row=3, column=1, sticky="n")
 
         # Maps tag -> square
         self.tag_to_square = {}
@@ -41,6 +54,8 @@ class GameGUI:
         # Mouse bindings (generic tag "piece")
         for ev in ("<ButtonPress-1>", "<B1-Motion>", "<ButtonRelease-1>"):
             self.canvas.tag_bind("piece", ev, getattr(self, ev.strip("<>").replace('-', '_')))
+
+        self.update_best_move_label()
 
     # ------------------------------------------------------------------ #
     # Drawing
@@ -195,6 +210,72 @@ class GameGUI:
         self.canvas.unbind("<B1-Motion>")
         self.canvas.unbind("<ButtonRelease-1>")
         messagebox.showinfo("Game Over", self.status.get())
+
+    def update_best_move_label(self):
+        # run AI search off the main thread to keep UI responsive
+        def search():
+            best = find_best_move(self.board, self.current_player)
+            text = f"AI Move: {best if best else 'None'}"
+            self.root.after(0, lambda: self.best_move_label.config(text=text))
+        threading.Thread(target=search, daemon=True).start()
+
+    def random_move(self):
+        possible_moves = self.board.generate_moves(self.current_player)
+        if not possible_moves:
+            messagebox.showinfo("No moves", "No legal moves available.")
+            return
+        move = np.random.choice(possible_moves)
+        frm, to, n = parse_move(move)
+        def do_random():
+            try:
+                self.board.apply_move(self.current_player, frm, to, n)
+            except Exception as exc:
+                messagebox.showerror("Illegal move", str(exc))
+                return
+            self.draw_pieces()
+            self._check_win_or_switch()
+            self.update_best_move_label()
+        self.animate_move(frm, to, n, do_random)
+
+    def best_ai_move(self):
+        best = find_best_move(self.board, self.current_player)
+        if not best:
+            messagebox.showinfo("No moves", "No AI move available.")
+            return
+        frm, to, n = parse_move(best)
+        def do_best():
+            try:
+                self.board.apply_move(self.current_player, frm, to, n)
+            except Exception as exc:
+                messagebox.showerror("Illegal move", str(exc))
+                return
+            self.draw_pieces()
+            self._check_win_or_switch()
+            self.update_best_move_label()
+        self.animate_move(frm, to, n, do_best)
+
+    def animate_move(self, from_sq, to_sq, n, callback):
+        # find all canvas items for the moving piece
+        items = self.canvas.find_withtag(f"piece_{from_sq}")
+        if not items:
+            callback()
+            return
+        # compute pixel delta
+        x0, y0 = coord_to_xy(from_sq)
+        x1, y1 = coord_to_xy(to_sq)
+        dx = (x1 - x0) * SQUARE
+        dy = (y0 - y1) * SQUARE
+        steps = 10
+        dx_step = dx / steps
+        dy_step = dy / steps
+        def step(i):
+            if i < steps:
+                for item in items:
+                    self.canvas.move(item, dx_step, dy_step)
+                self.root.after(30, lambda: step(i+1))
+            else:
+                callback()
+        step(0)
 
 
 if __name__ == "__main__":
