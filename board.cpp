@@ -87,22 +87,22 @@ static constexpr std::uint64_t MASK_RIGHT_MOVES[2][MOVE_SIZE] = {
 
 // SHIFT APPLICATION MASKS --------------------------------------------------------------------------------------------------
 
-static constexpr int SHIFT_1HORIZONTAL = 1;  // 1 horizontal
-static constexpr int SHIFT_2HORIZONTAL = 2;  // 2 horizontal
-static constexpr int SHIFT_3HORIZONTAL = 3;  // 3 horizontal
-static constexpr int SHIFT_4HORIZONTAL = 4;  // 4 horizontal
-static constexpr int SHIFT_5HORIZONTAL = 5;  // 5 horizontal
-static constexpr int SHIFT_6HORIZONTAL = 6;  // 6 horizontal
+static constexpr int SHIFT_1HORIZONTAL = 1;  // 1 horizontal 
+static constexpr int SHIFT_2HORIZONTAL = 2;  // 2 horizontal 
+static constexpr int SHIFT_3HORIZONTAL = 3;  // 3 horizontal 
+static constexpr int SHIFT_4HORIZONTAL = 4;  // 4 horizontal 
+static constexpr int SHIFT_5HORIZONTAL = 5;  // 5 horizontal 
+static constexpr int SHIFT_6HORIZONTAL = 6;  // 6 horizontal 
 
-static constexpr int SHIFT_1VERTICAL   = 7;  // 1 vertical
-static constexpr int SHIFT_2VERTICAL   = 14; // 2 vertical
-static constexpr int SHIFT_3VERTICAL   = 21; // 3 vertical
-static constexpr int SHIFT_4VERTICAL   = 28; // 4 vertical
-static constexpr int SHIFT_5VERTICAL   = 35; // 5 vertical
-static constexpr int SHIFT_6VERTICAL   = 42; // 6 vertical
+static constexpr int SHIFT_1VERTICAL   = 7;  // 1 vertical 
+static constexpr int SHIFT_2VERTICAL   = 14; // 2 vertical 
+static constexpr int SHIFT_3VERTICAL   = 21; // 3 vertical 
+static constexpr int SHIFT_4VERTICAL   = 28; // 4 vertical 
+static constexpr int SHIFT_5VERTICAL   = 35; // 5 vertical 
+static constexpr int SHIFT_6VERTICAL   = 42; // 6 vertical 
 
 
-static constexpr int SHIFTS[MOVE_DIMENSION-2][MOVE_SIZE] = {
+static constexpr int SHIFTS[2][MOVE_SIZE] = {
     {SHIFT_1HORIZONTAL, SHIFT_2HORIZONTAL, SHIFT_3HORIZONTAL, SHIFT_4HORIZONTAL, SHIFT_5HORIZONTAL, SHIFT_6HORIZONTAL},
     {SHIFT_1VERTICAL, SHIFT_2VERTICAL, SHIFT_3VERTICAL, SHIFT_4VERTICAL, SHIFT_5VERTICAL, SHIFT_6VERTICAL} 
 };
@@ -122,9 +122,8 @@ static constexpr std::uint64_t MASK_7 = 7ULL << TYPE_INDEX;
 static constexpr std::uint64_t MASK_STACKHEIGHT = 7ULL << TYPE_INDEX; // TODO: how to handle guard?
 static constexpr std::uint64_t MASK_TYPE[7]={MASK_1, MASK_2, MASK_3, MASK_4, MASK_5, MASK_6, MASK_7};
 
-// Board Mask
-static constexpr std::uint64_t MASK_FIGURE_TYPE = 7ULL << TYPE_INDEX; 
-static constexpr std::uint64_t MASK_BOARD = (1ULL << 49) - 1;
+
+
 //------------------------------------------------------------------------------------------------------------
 
 static void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t &guardB, uint64_t &guardR, int &depth) {
@@ -145,7 +144,7 @@ static void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)
     depth = 0; // Initialize depth for alpha-beta pruning
 }
  
-static void move_generationB_1(uint64_t (&moves)[24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
+static void move_generationB_1(uint64_t (&moves)[24][2], uint64_t* __restrict figuresB, uint64_t* __restrict figuresR, uint64_t guardB, uint64_t guardR) {
     int adress_count = 0; // Reset adress count for the new generation
     //uint64_t enemy_moves = 0;
     
@@ -167,9 +166,10 @@ static void move_generationB_1(uint64_t (&moves)[24][2], uint64_t (&figuresB)[7]
         uint64_t shift_1 = SHIFTS[1][s];
 
         uint64_t mask_type = MASK_TYPE[s]; 
-             
+        
+        
         // How to make use of ILP
-        uint64_t endpos_1 = (figsB &  mask_left_moves_0) << shift_0; // LEFT SHIFTS
+        uint64_t endpos_1 = (figsB & mask_left_moves_0) << shift_0; // LEFT SHIFTS
         uint64_t endpos_2 = (figsB & mask_left_moves_1) << shift_1; // LEFT SHIFTS
         uint64_t endpos_3 = (figsB & mask_right_moves_0) >> shift_0; // RIGHT SHIFTS
         uint64_t endpos_4 = (figsB & mask_right_moves_1) >> shift_1; // RIGHT SHIFTS
@@ -252,53 +252,8 @@ inline static bool moveB(uint64_t from, uint64_t to, uint64_t (&figuresB)[7], ui
     guardB ^= (guardB ^ to) & -(from & guardB == 0); // x ^= (x ^ newval) & -cond; 
 
     // check winconditions --> true if won
-    return (from & guardB && to & HOMESQUARE_R) || (to & guardR );
+    return (from & guardB && to & HOMESQUARE_R) || (to & guardR);
 }
-
-// inline static bool moveB() {
-//     // Check Wincondition Opponent guard hit
-//     if (to & guardR) return true;
-
-//     // Move guard
-//     if (from & guardB) {
-//         // Check Wincondition Guard on opponent home square
-//         if (to & HOMESQUARE_R) return true; 
-//         guardB = to; // Move the guard to the new position (guard has height 1)
-//     }
-//     else {
-//         leaving_height = ((to & MASK_STACKHEIGHT) >> TYPE_INDEX); 
-
-//         // Remove the positions from the origin position
-//         for (int i = 0; i < 7; ++i) {
-//             if (!(from & figuresB[i])) {
-//                 for (int l = 1; l <= leaving_height; ++l) {
-//                     figuresB[i-l] &= ~from; 
-//                 }
-//                 break;
-//             }
-//         }
-
-//         // Add the positions to the destination position
-//         to = to & MASK_BOARD; // Remove the stack height from the to position
-//         for (int i = 0; i < 7; ++i) {
-//             if (!(to & figuresB[i])) {
-//                 for (int l = 0; l < leaving_height; ++l) {
-//                     figuresB[i+l] |= to; 
-//                 }
-//                 break;
-//             }
-//         }
-//     }
-//     // Remove enemy figure 
-//     if (to & figuresR[0]) {
-//         for (int i = 0; i < 7; ++i) {
-//             if (!(figuresR[i] & to)) break;
-//             figuresR[i] &= ~to;
-//         }
-//     }
-//     return false;
-// }
-
 
 
 // TODO in caller function: while (startpos)
@@ -427,7 +382,7 @@ void temp() {
 
 }
 
-constexpr int NUM_RUNS = 10000; // Number of tests to run
+constexpr int NUM_RUNS = 100000000; // Number of tests to run
 void benchmark_generator() {
 
 
@@ -446,22 +401,22 @@ void benchmark_generator() {
     volatile uint64_t dummy_1 = 0; // Dummy variable to prevent optimization
 
 
-    auto start = std::chrono::high_resolution_clock::now(); // Start the timer
+    auto start = std::chrono::steady_clock::now(); // Start the timer
     for (int i = 0; i < NUM_RUNS; ++i) {
         move_generationB_1(moves[0], figuresB, figuresR, guardB, guardR);
         dummy_0 ^= moves[0][i % 16][0]; // Dummy operation to prevent optimization
         dummy_1 ^= moves[0][i % 16][1]; // Dummy operation to prevent optimization
     }
-    auto end = std::chrono::high_resolution_clock::now(); // Stop the timer
+    auto end = std::chrono::steady_clock::now(); // Stop the timer
 
     
     std::chrono::duration<double> elapsed = end - start; // Calculate the elapsed time
 
-    volatile auto dif = elapsed.count();
+    // volatile auto dif = elapsed.count();
 
-    std::cout << "Dummy 0: " << dummy_0 << std::endl; // Print the dummy variable
-    std::cout << "Dummy 1: " << dummy_1 << std::endl; // Print the dummy variable
-    std::cout << "Time taken for " << NUM_RUNS << " runs: " << dif << " seconds" << std::endl; // Print the elapsed time
+    // std::cout << "Dummy 0: " << dummy_0 << std::endl; // Print the dummy variable
+    // std::cout << "Dummy 1: " << dummy_1 << std::endl; // Print the dummy variable
+    std::cout << "Time taken for " << NUM_RUNS << " runs: " << elapsed.count() << " seconds" << std::endl; // Print the elapsed time
 
 
 }
@@ -470,7 +425,8 @@ void benchmark_generator() {
 
 int main() {  
     benchmark_generator();
-    std::cout << "Enter to exit" << std::endl;
-    std::cin.get();
+    // std::cout << "Enter to exit" << std::endl;
+    // std::cin.get();
+    // std::cout << "Tick period: " << std::chrono::steady_clock::period::num << "/" << std::chrono::steady_clock::period::den << "seconds/n" <<std::endl; // Print the period of the clock
     return 0;
 }
