@@ -13,6 +13,10 @@ BLUE  = "#4A90E2"
 RED   = "#D0021B"
 HIGHLIGHT = "#FFFF66"
 
+# Margins for labels
+LEFT_MARGIN = 30   # space for rank labels
+BOTTOM_MARGIN = 30 # space for file labels
+
 class GameGUI:
     def __init__(self, root):
         self.root = root
@@ -23,8 +27,8 @@ class GameGUI:
         self.opponent = {'b': 'r', 'r': 'b'}
 
         self.canvas = tk.Canvas(root,
-                                width=SQUARE*BOARD_SIZE,
-                                height=SQUARE*BOARD_SIZE,
+                                width=SQUARE*BOARD_SIZE + LEFT_MARGIN,
+                                height=SQUARE*BOARD_SIZE + BOTTOM_MARGIN,
                                 highlightthickness=0)
         self.canvas.grid(row=0, column=0, rowspan=BOARD_SIZE, padx=10, pady=10)
 
@@ -38,8 +42,16 @@ class GameGUI:
         self.best_button = tk.Button(root, text="Best AI Move", command=self.best_ai_move)
         self.best_button.grid(row=2, column=1, sticky="n", pady=5)
 
+        self.export_button = tk.Button(root, text="Export FEN", command=self.export_position)
+        self.export_button.grid(row=3, column=1, sticky="n", pady=5)
+
+        # Free play mode checkbox
+        self.free_play = tk.BooleanVar(value=False)
+        self.free_play_cb = tk.Checkbutton(root, text="Free Play", variable=self.free_play)
+        self.free_play_cb.grid(row=5, column=1, sticky="n", pady=5)
+
         self.best_move_label = tk.Label(root, text="AI Move: None", font=("Arial", 14))
-        self.best_move_label.grid(row=3, column=1, sticky="n")
+        self.best_move_label.grid(row=4, column=1, sticky="n")
 
         # Maps tag -> square
         self.tag_to_square = {}
@@ -57,16 +69,42 @@ class GameGUI:
 
         self.update_best_move_label()
 
+    def export_position(self) -> str:
+        fen = self.board.export_fen(self.current_player)
+        print('Exporting position:', fen)
+        return fen
+
     # ------------------------------------------------------------------ #
     # Drawing
     # ------------------------------------------------------------------ #
     def draw_board(self):
         for y in range(BOARD_SIZE):
             for x in range(BOARD_SIZE):
-                px, py = x*SQUARE, (BOARD_SIZE-1-y)*SQUARE
-                color = LIGHT if (x+y) % 2 == 0 else DARK
-                self.canvas.create_rectangle(px, py, px+SQUARE, py+SQUARE,
+                px = LEFT_MARGIN + x * SQUARE
+                py = (BOARD_SIZE - 1 - y) * SQUARE
+                color = LIGHT if (x + y) % 2 == 0 else DARK
+                self.canvas.create_rectangle(px, py, px + SQUARE, py + SQUARE,
                                              fill=color, outline="black")
+
+                # Draw file labels (A-G) below the board
+                if y == 0:
+                    letter = chr(ord('A') + x)
+                    self.canvas.create_text(
+                        px + SQUARE/2,
+                        SQUARE * BOARD_SIZE + BOTTOM_MARGIN / 2,
+                        text=letter,
+                        font=("Arial", 12, "bold")
+                    )
+
+                # Draw rank labels (1-7) to the left of the board
+                if x == 0:
+                    number = str(y + 1)
+                    self.canvas.create_text(
+                        LEFT_MARGIN / 2,
+                        py + SQUARE/2,
+                        text=number,
+                        font=("Arial", 12, "bold")
+                    )
 
     def draw_pieces(self):
         # remove previous pieces (shape & text)
@@ -81,7 +119,8 @@ class GameGUI:
                 sq = xy_to_coord(x, y)
                 uniq = f"piece_{sq}"
                 fill = BLUE if pc.color == 'b' else RED
-                px, py = x*SQUARE+SQUARE/2, (BOARD_SIZE-1-y)*SQUARE+SQUARE/2
+                px = LEFT_MARGIN + x * SQUARE + SQUARE/2
+                py = (BOARD_SIZE - 1 - y) * SQUARE + SQUARE/2
                 r = SQUARE*0.35
                 if pc.kind == 'guard':
                     shape = self.canvas.create_rectangle(px-r, py-r, px+r, py+r,
@@ -112,7 +151,7 @@ class GameGUI:
         uniq_tag = next(t for t in tags if t.startswith("piece_"))
         sq = self.tag_to_square[uniq_tag]
         piece = self.board.piece_at(sq)
-        if piece.color != self.current_player:
+        if not self.free_play.get() and piece.color != self.current_player:
             return
 
         # store drag info
@@ -128,7 +167,8 @@ class GameGUI:
         # highlight
         for dest in legal:
             dx, dy = coord_to_xy(dest)
-            px, py = dx*SQUARE, (BOARD_SIZE-1-dy)*SQUARE
+            px = LEFT_MARGIN + dx * SQUARE
+            py = (BOARD_SIZE - 1 - dy) * SQUARE
             hl = self.canvas.create_rectangle(px, py, px+SQUARE, py+SQUARE,
                                               outline=HIGHLIGHT, width=3)
             self.drag["highlight"].append(hl)
@@ -152,6 +192,20 @@ class GameGUI:
         bx = int(event.x // SQUARE)
         by = BOARD_SIZE - 1 - int(event.y // SQUARE)
         dest_sq = xy_to_coord(bx, by) if 0 <= bx < BOARD_SIZE and 0 <= by < BOARD_SIZE else None
+
+        # Free-play: allow any move/capture without validation
+        if self.free_play.get():
+            if dest_sq is None:
+                self._cancel_drag()
+                return
+            from_sq = self.drag["from_sq"]
+            piece = self.board.piece_at(from_sq)
+            # Move piece freely on board
+            self.board.place(from_sq, None)
+            self.board.place(dest_sq, piece)
+            self._cancel_drag()
+            return
+
         if dest_sq not in self.drag["legal"]:
             self._cancel_drag()
             return
