@@ -152,108 +152,48 @@ static void move_generationB_1(uint64_t (&moves)[24][2], uint64_t* __restrict fi
     #pragma GCC unroll 6
     for (int s = 0; s < 6; ++s) {   
         // load into registers for faster access
-        uint64_t figsB=figuresB[s];
-        uint64_t figsR=figuresR[s];
-        uint64_t clear_mask_B=figuresR[s+1] | guardB;
-        uint64_t clear_mask_R=figuresB[s+1] | guardR;
-
-        uint64_t mask_left_moves_0 = MASK_LEFT_MOVES[0][s];
-        uint64_t mask_left_moves_1 = MASK_LEFT_MOVES[1][s];
-        uint64_t mask_right_moves_0 = MASK_RIGHT_MOVES[0][s];
-        uint64_t mask_right_moves_1 = MASK_RIGHT_MOVES[1][s];
-
+        // load into registers for faster access
+        uint64_t figsB = figuresB[s];
+        uint64_t clear_mask_B = ~(figuresR[s+1] | guardB);
         uint64_t shift_0 = SHIFTS[0][s];
         uint64_t shift_1 = SHIFTS[1][s];
+        uint64_t mask_type = MASK_TYPE[s];
 
-        uint64_t mask_type = MASK_TYPE[s]; 
-        
-        
-        // How to make use of ILP
-        uint64_t endpos_1 = (figsB & mask_left_moves_0) << shift_0; // LEFT SHIFTS
-        uint64_t endpos_2 = (figsB & mask_left_moves_1) << shift_1; // LEFT SHIFTS
-        uint64_t endpos_3 = (figsB & mask_right_moves_0) >> shift_0; // RIGHT SHIFTS
-        uint64_t endpos_4 = (figsB & mask_right_moves_1) >> shift_1; // RIGHT SHIFTS
+        // calculte the end positions
+        uint64_t endpos_1 = (figsB & MASK_LEFT_MOVES[0][s]) << shift_0 & clear_mask_B; // LEFT SHIFTS
+        uint64_t endpos_2 = (figsB & MASK_LEFT_MOVES[1][s]) << shift_1 & clear_mask_B; // LEFT SHIFTS
+        uint64_t endpos_3 = (figsB & MASK_RIGHT_MOVES[0][s]) >> shift_0 & clear_mask_B; // RIGHT SHIFTS
+        uint64_t endpos_4 = (figsB & MASK_RIGHT_MOVES[1][s]) >> shift_1 & clear_mask_B; // RIGHT SHIFTS
 
-        endpos_1 &= ~(endpos_1 & clear_mask_B); // clear bits where enemy stack is higher or own guard stands
-        endpos_2 &= ~(endpos_2 & clear_mask_B); // clear bits where enemy stack is higher or own guard stands
-        endpos_3 &= ~(endpos_3 & clear_mask_B); // clear bits where enemy stack is higher or own guard stands
-        endpos_4 &= ~(endpos_4 & clear_mask_B); // clear bits where enemy stack is higher or own guard stands
-
-        uint64_t startpos_1 = endpos_1 >> shift_0; // calculate the startpositions by shifting the endpos backwards
-        uint64_t startpos_2 = endpos_2 >> shift_1; // calculate the startpositions by shifting the endpos backwards 
-        uint64_t startpos_3 = endpos_3 << shift_0; // calculate the startpositions by shifting the endpos backwards
-        uint64_t startpos_4 = endpos_4 << shift_1; // calculate the startpositions by shifting the endpos backwards
-
-        moves[adress_count][0] = startpos_1; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
+        moves[adress_count][0] = endpos_1 >> shift_0; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
         moves[adress_count++][1] = endpos_1 | mask_type; // set the stack height of the moving part of the figure
-
-        moves[adress_count][0] = startpos_2; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
+        moves[adress_count][0] = endpos_2 >> shift_1; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
         moves[adress_count++][1] = endpos_2 | mask_type; // set the stack height of the moving part of the figure
-
-        moves[adress_count][0] = startpos_3; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
+        moves[adress_count][0] = endpos_3 << shift_0; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
         moves[adress_count++][1] = endpos_3 | mask_type; // set the stack height of the moving part of the figure
-
-        moves[adress_count][0] = startpos_4; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
+        moves[adress_count][0] = endpos_4 << shift_1; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
         moves[adress_count++][1] = endpos_4 | mask_type; // set the stack height of the moving part of the figure
-
-        // endpos_1 = (figsR & MASK_LEFT_MOVES[0][s]) << SHIFTS[0][s]; // enemy moves for the evaluation function
-        // endpos_2 = (figsR & MASK_LEFT_MOVES[1][s]) << SHIFTS[1][s]; // enemy moves for the evaluation function
-        // endpos_3 = (figsR & MASK_RIGHT_MOVES[0][s]) >> SHIFTS[0][s]; // enemy moves for the evaluation function
-        // endpos_4 = (figsR & MASK_RIGHT_MOVES[1][s]) >> SHIFTS[1][s]; // enemy moves for the evaluation function
-
-        // enemy_moves |= endpos_1 & ~(endpos_1 & clear_mask_R); // enemy moves for the evaluation function
-        // enemy_moves |= endpos_2 & ~(endpos_2 & clear_mask_R); // enemy moves for the evaluation function
-        // enemy_moves |= endpos_3 & ~(endpos_3 & clear_mask_R); // enemy moves for the evaluation function
-        // enemy_moves |= endpos_4 & ~(endpos_4 & clear_mask_R); // enemy moves for the evaluation function
     }
 
     uint64_t shift_0 = SHIFTS[0][0];
     uint64_t shift_1 = SHIFTS[1][0];
+    uint64_t mask_type = MASK_TYPE[0];
+    uint64_t not_figB = ~figuresB[0];
+
+    uint64_t endpos_1 = (guardB & MASK_LEFT_MOVES[0][0])  << shift_0 & not_figB;
+    uint64_t endpos_2 = (guardB & MASK_LEFT_MOVES[1][0])  << shift_1 & not_figB;
+    uint64_t endpos_3 = (guardB & MASK_RIGHT_MOVES[0][0]) >> shift_0 & not_figB;
+    uint64_t endpos_4 = (guardB & MASK_RIGHT_MOVES[1][0]) >> shift_1 & not_figB;
     
-    moves[0][0] |= guardB; // set the last move to 0 to indicate the end of the moves
-    moves[0][1] |= guardB << shift_0; // set the last move to 0 to indicate the end of the moves
-    moves[1][0] |= guardB; // set the last move to 0 to indicate the end of the moves
-    moves[1][1] |= guardB << shift_1; // set the last move to 0 to indicate the end of the moves
-    moves[2][0] |= guardB; // set the last move to 0 to indicate the end of the moves
-    moves[2][1] |= guardB >> shift_0; // set the last move to 0 to indicate the end of the moves
-    moves[3][0] |= guardB; // set the last move to 0 to indicate the end of the moves
-    moves[3][1] |= guardB >> shift_1; // set the last move to 0 to indicate the end of the moves
+    moves[0][0] |= endpos_1 >> shift_0; // set the last move to 0 to indicate the end of the moves
+    moves[0][1] |= endpos_1 | mask_type; // set the last move to 0 to indicate the end of the moves
+    moves[1][0] |= endpos_2 >> shift_1; // set the last move to 0 to indicate the end of the moves
+    moves[1][1] |= endpos_2 | mask_type; // set the last move to 0 to indicate the end of the moves
+    moves[2][0] |= endpos_3 << shift_0; // set the last move to 0 to indicate the end of the moves
+    moves[2][1] |= endpos_3 | mask_type; // set the last move to 0 to indicate the end of the moves
+    moves[3][0] |= endpos_4 << shift_1; // set the last move to 0 to indicate the end of the moves
+    moves[3][1] |= endpos_4 | mask_type; // set the last move to 0 to indicate the end of the moves
 }       
-
-inline static bool moveB(uint64_t from, uint64_t to, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t &guardB, uint64_t guardR) {
-    if (__builtin_expect((!(from & guardB) && !(to & figuresB[0])),1)) {
-        uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
-        uint8_t origin_height = 0;
-        uint8_t target_height = 0;
-        bool not_found_1 = true;
-        bool not_found_2 = true;
-
-        for (int i = 0; i < 7; ++i) {
-            uint64_t figsB = figuresB[i];
-            
-            origin_height ^= (origin_height ^ i) & -not_found_1; // x ^= (x ^ newval) & -cond;
-            target_height ^= (target_height ^ i) & -not_found_2; // x ^= (x ^ newval) & -cond;
-            
-            not_found_1 = from & figsB == 0; 
-            not_found_2 = to & figsB == 0; 
-
-            figuresR[i] &= ~(to & -(to & figuresR[i] == 0));
-        }
-
-        for (int l = 1; l <= leaving_height; ++l) {
-            // Remove the positions from the origin position
-            figuresB[origin_height - l] ^= from; 
-
-            // Add the positions to the destination position	
-            figuresB[target_height + l] |= to;
-        }
-    }
-    // Guard Move
-    guardB ^= (guardB ^ to) & -(from & guardB == 0); // x ^= (x ^ newval) & -cond; 
-
-    // check winconditions --> true if won
-    return (from & guardB && to & HOMESQUARE_R) || (to & guardR);
-}
 
 
 // TODO in caller function: while (startpos)
@@ -384,8 +324,6 @@ void temp() {
 
 constexpr int NUM_RUNS = 100000000; // Number of tests to run
 void benchmark_generator() {
-
-
     uint64_t figuresB[7];
     uint64_t figuresR[7];
 
@@ -400,6 +338,12 @@ void benchmark_generator() {
     volatile uint64_t dummy_0 = 0; // Dummy variable to prevent optimization
     volatile uint64_t dummy_1 = 0; // Dummy variable to prevent optimization
 
+    // CPU Warmup
+    for (int i = 0; i < 1000; ++i) {
+        move_generationB_1(moves[0], figuresB, figuresR, guardB, guardR);
+        dummy_0 ^= moves[0][i % 16][0]; // Dummy operation to prevent optimization
+        dummy_1 ^= moves[0][i % 16][1]; // Dummy operation to prevent optimization
+    }
 
     auto start = std::chrono::steady_clock::now(); // Start the timer
     for (int i = 0; i < NUM_RUNS; ++i) {
@@ -417,9 +361,9 @@ void benchmark_generator() {
     // std::cout << "Dummy 0: " << dummy_0 << std::endl; // Print the dummy variable
     // std::cout << "Dummy 1: " << dummy_1 << std::endl; // Print the dummy variable
     std::cout << "Time taken for " << NUM_RUNS << " runs: " << elapsed.count() << " seconds" << std::endl; // Print the elapsed time
-
-
 }
+
+
 
 
 
