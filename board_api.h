@@ -1,36 +1,14 @@
 #pragma once
-
-#ifdef _WIN32
-  #define BOARD_API __declspec(dllexport)
-#else
-  #define BOARD_API
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// BOARD_API int multiply(int a, int b);
+#include <cstdint>
+#include <string>
+#include "const.h"
 
 
-// INIT/RESET BOARD () -> ()
-// RESET GUI in GUI logic and call init_board() in C++ logic
+void clear_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR);
+void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth);
+void set_board(std::string fen_pos, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn);
 
-// MOVE (to, from/FEN) -> (bool allowed, bool_game over)
-// FEN or Bitboard in args
-// Adjust GUI if allowed == true
-// if bool_game_over do something
-
-/*
-OPTIONAL--------------------
-
-UNDO
-
-AI_MOVE
-
-RAND_MOVE
-*/
-
-#ifdef __cplusplus
-}
-#endif
+inline std::string FEN_position(std::uint64_t pos);
+std::string extract_FEN_Moves(uint64_t (&moves)[24][2]);
+void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR);
+void print_Bitboard(std::uint64_t bitboard);
