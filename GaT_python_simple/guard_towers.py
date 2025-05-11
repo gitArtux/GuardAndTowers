@@ -244,6 +244,27 @@ class Board:
         print(horizontal)
         print('    ' + '   '.join(FILES))
 
+    def export_fen(self, current_player: str) -> str:
+        """Return a FEN-like string of the current position plus whose turn."""
+        rows = []
+        for y in range(BOARD_SIZE):
+            empties = 0
+            row_str = ''
+            for x in range(BOARD_SIZE):
+                pc = self.grid[y][x]
+                if pc is None:
+                    empties += 1
+                else:
+                    if empties > 0:
+                        row_str += str(empties)
+                        empties = 0
+                    row_str += pc.char()
+            if empties > 0:
+                row_str += str(empties)
+            rows.append(row_str)
+        return '/'.join(rows) + ' ' + current_player
+
+
 
 # ---------------------------------------------------------------------------#
 # Game Loop
@@ -307,4 +328,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
