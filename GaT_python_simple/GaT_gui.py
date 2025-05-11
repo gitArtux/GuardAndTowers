@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import libboard
 
-print(libboard.say_hello("Ben"))
+cpp_result = libboard.say_hello("Ben")
+print(cpp_result)
 
 SQUARE = 80
 LIGHT = "#F0D9B5"
