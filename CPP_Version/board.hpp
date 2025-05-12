@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include "const.h"
+#include "const.hpp"
 
 
 void test_board_link(const std::string& str); // Basic print function

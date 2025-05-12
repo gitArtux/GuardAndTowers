@@ -1,5 +1,5 @@
-#include "board.h"
-#include "calculations.h"
+#include "board.hpp"
+#include "calculations.hpp"
 
 #include <bitset>
 #include <string>

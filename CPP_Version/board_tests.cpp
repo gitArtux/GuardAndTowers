@@ -1,5 +1,5 @@
-#include "calculations.h"
-#include "board.h"
+#include "calculations.hpp"
+#include "board.hpp"
 
 
 // Temporary includes for printing and FEN
