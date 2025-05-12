@@ -3,3 +3,5 @@
 *.ilk
 *.pdb
 *.obj
+
+/CPP_Version/build

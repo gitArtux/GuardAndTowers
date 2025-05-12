@@ -12,6 +12,6 @@ PYBIND11_MODULE(libboard, m) {
 }
 // Compilation command (for python3.11):
 // c++ -O3 -Wall -shared -std=c++17 -fPIC \
-// $(python3.11 -m pybind11 --includes) board.cpp \
+// $(python3.11 -m pybind11 --includes) pybind.cpp \
 // -undefined dynamic_lookup \
 // -o libboard$(python3.11-config --extension-suffix)

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdint>
 #include <chrono>
-#include "calculations_api.h"
+#include "calculations.h"
 
 // Benchmarking --------------------------------------------------------------------------------------------------- 
 constexpr int NUM_RUNS = 10000000; // Number of tests to run
