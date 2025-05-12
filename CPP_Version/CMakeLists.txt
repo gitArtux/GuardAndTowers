@@ -27,7 +27,7 @@ add_executable(main
 )
 
 add_executable(BoardTests
-    board_tests.cpp
+    test_board.cpp
     board.cpp
     calculations.cpp
     benchmarking.cpp
