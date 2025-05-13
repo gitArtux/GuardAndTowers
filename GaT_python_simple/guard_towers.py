@@ -1,13 +1,34 @@
 import sys
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
+import random
 
 import numpy as np
+
+from colorama import init, Fore, Back, Style
+init(autoreset=True)
 
 FILES = 'ABCDEFG'
 RANKS = '1234567'
 BOARD_SIZE = 7
 DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1)]  # E, W, N, S
+
+
+random.seed(42)  # Optional: seed for reproducibility
+
+
+ZOBRIST_TABLE = {
+    (x, y, color, kind, height): random.getrandbits(64)
+    for x in range(7)
+    for y in range(7)
+    for color in ('b', 'r')
+    for kind in ('guard', 'tower')
+    for height in range(1, 8)
+}
+
+# Zobrist side-to-move bit
+ZOBRIST_SIDE = random.getrandbits(64)
+
 
 
 # ---------------------------------------------------------------------------#
@@ -72,6 +93,22 @@ class Board:
             [None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)
         ]
         self._setup_initial()
+        # Initialize incremental zobrist hash
+        self.zobrist = 0
+        for y in range(BOARD_SIZE):
+            for x in range(BOARD_SIZE):
+                piece = self.grid[y][x]
+                if piece:
+                    height = piece.height if piece.kind == 'tower' else 1
+                    key = (x, y, piece.color, piece.kind, height)
+                    self.zobrist ^= ZOBRIST_TABLE[key]
+        # Initialize side-to-move (blue starts) and include in hash
+        self.side_to_move = 'b'
+        self.zobrist ^= ZOBRIST_SIDE
+        # Stack for undoing moves
+        self.move_stack = []
+        # Track last move for highlighting
+        self.last_move: Optional[Tuple[str, str]] = None
 
     # ---------- setup ------------------------------------------------------#
     def _setup_initial(self):
@@ -96,6 +133,19 @@ class Board:
     # ---------- move execution --------------------------------------------#
     def apply_move(self, player: str, frm: str, to: str, n: Optional[int]) -> None:
         """Validate and execute a move (mutates board). Raises ValueError on error."""
+        # Record original pieces and remove from hash
+        x_from, y_from = coord_to_xy(frm)
+        x_to, y_to = coord_to_xy(to)
+        orig_from = self.piece_at(frm)
+        orig_from_copy = Piece(orig_from.color, orig_from.kind, orig_from.height) if orig_from else None
+        orig_dest = self.piece_at(to)
+        orig_dest_copy = Piece(orig_dest.color, orig_dest.kind, orig_dest.height) if orig_dest else None
+        self.move_stack.append((frm, to, orig_from_copy, orig_dest_copy))
+        if orig_from_copy:
+            self.zobrist ^= ZOBRIST_TABLE[(x_from, y_from, orig_from_copy.color, orig_from_copy.kind, orig_from_copy.height)]
+        if orig_dest_copy:
+            self.zobrist ^= ZOBRIST_TABLE[(x_to, y_to, orig_dest_copy.color, orig_dest_copy.kind, orig_dest_copy.height)]
+
         moving_piece = self.piece_at(frm)
         if moving_piece is None or moving_piece.color != player:
             raise ValueError('No friendly piece on the origin square.')
@@ -114,6 +164,15 @@ class Board:
                 raise ValueError('Guard cannot move onto a friendly piece.')
             self.place(frm, None)
             self.place(to, moving_piece)
+            # Add new guard position to hash
+            new_dest = self.piece_at(to)
+            height_dest = 1  # guard height
+            self.zobrist ^= ZOBRIST_TABLE[(x_to, y_to, new_dest.color, new_dest.kind, height_dest)]
+            # Flip side-to-move and update hash
+            self.side_to_move = 'r' if self.side_to_move == 'b' else 'b'
+            self.zobrist ^= ZOBRIST_SIDE
+            # Record last move for highlighting
+            self.last_move = (frm, to)
             return
 
         # ---- tower --------------------------------------------------------#
@@ -161,6 +220,60 @@ class Board:
         else:
             remaining = Piece(player, 'tower', height - move_n)
             self.place(frm, remaining)
+
+        # Add new pieces to hash
+        new_dest = self.piece_at(to)
+        height_dest = new_dest.height
+        self.zobrist ^= ZOBRIST_TABLE[(x_to, y_to, new_dest.color, new_dest.kind, height_dest)]
+        new_from = self.piece_at(frm)
+        if new_from:
+            height_from = new_from.height
+            self.zobrist ^= ZOBRIST_TABLE[(x_from, y_from, new_from.color, new_from.kind, height_from)]
+        # Flip side-to-move and update hash
+        self.side_to_move = 'r' if self.side_to_move == 'b' else 'b'
+        self.zobrist ^= ZOBRIST_SIDE
+        # Record last move for highlighting
+        self.last_move = (frm, to)
+
+    def unapply_move(self):
+        """
+        Undo the last move using the move_stack and update the zobrist hash.
+        """
+        frm, to, orig_from, orig_dest = self.move_stack.pop()
+        x_from, y_from = coord_to_xy(frm)
+        x_to, y_to = coord_to_xy(to)
+        # Remove current pieces from hash
+        curr_from = self.piece_at(frm)
+        if curr_from:
+            h = curr_from.height if curr_from.kind == 'tower' else 1
+            self.zobrist ^= ZOBRIST_TABLE[(x_from, y_from, curr_from.color, curr_from.kind, h)]
+        curr_dest = self.piece_at(to)
+        if curr_dest:
+            h = curr_dest.height if curr_dest.kind == 'tower' else 1
+            self.zobrist ^= ZOBRIST_TABLE[(x_to, y_to, curr_dest.color, curr_dest.kind, h)]
+        # Restore original pieces
+        self.place(frm, orig_from)
+        self.place(to, orig_dest)
+        # Add original pieces back to hash
+        if orig_from:
+            h = orig_from.height if orig_from.kind == 'tower' else 1
+            self.zobrist ^= ZOBRIST_TABLE[(x_from, y_from, orig_from.color, orig_from.kind, h)]
+        if orig_dest:
+            h = orig_dest.height if orig_dest.kind == 'tower' else 1
+            self.zobrist ^= ZOBRIST_TABLE[(x_to, y_to, orig_dest.color, orig_dest.kind, h)]
+        # Flip side-to-move and update hash
+        self.side_to_move = 'r' if self.side_to_move == 'b' else 'b'
+        self.zobrist ^= ZOBRIST_SIDE
+
+    def apply_null_move(self):
+        """Perform a null move: flip side-to-move and update hash."""
+        self.side_to_move = 'r' if self.side_to_move == 'b' else 'b'
+        self.zobrist ^= ZOBRIST_SIDE
+
+    def unapply_null_move(self):
+        """Undo a null move: flip side-to-move and update hash."""
+        self.zobrist ^= ZOBRIST_SIDE
+        self.side_to_move = 'r' if self.side_to_move == 'b' else 'b'
 
     # ---------- move generation -------------------------------------------#
     def generate_moves(self, player: str) -> List[str]:
@@ -237,12 +350,24 @@ class Board:
             print(horizontal)
             row_str = f'{RANKS[y]} |'
             for x in range(BOARD_SIZE):
+                coord = xy_to_coord(x, y)
                 pc = self.grid[y][x]
-                cell = pc.char() if pc else '  '
-                row_str += f'{cell:3}|'
+                # Determine base cell content (2 visible chars)
+                if pc:
+                    char = pc.char()
+                    base = Fore.BLUE + char + Style.RESET_ALL if pc.color == 'b' else Fore.RED + char + Style.RESET_ALL
+                else:
+                    base = '  '
+                # Highlight from/to squares
+                if self.last_move and coord in self.last_move:
+                    cell = Back.YELLOW + base + Style.RESET_ALL
+                else:
+                    cell = base
+                # Add cell with one space padding each side
+                row_str += f' {cell}|'
             print(row_str)
         print(horizontal)
-        print('    ' + '   '.join(FILES))
+        print('   ' + '   '.join(FILES))
 
     def export_fen(self, current_player: str) -> str:
         """Return a FEN-like string of the current position plus whose turn."""
@@ -263,6 +388,10 @@ class Board:
                 row_str += str(empties)
             rows.append(row_str)
         return '/'.join(rows) + ' ' + current_player
+    
+    def zobrist_hash(self) -> int:
+        return self.zobrist
+
 
 
 
@@ -278,7 +407,9 @@ def main():
     while True:
         board.draw()
         possible_moves = board.generate_moves(player)
-        print(f"\nTurn – {'Blue' if player == 'b' else 'Red'}")
+        turn_color = Fore.BLUE if player == 'b' else Fore.RED
+        turn_name = 'Blue' if player == 'b' else 'Red'
+        print(f"\nTurn – {turn_color}{turn_name}{Style.RESET_ALL}")
         print("\nPossible moves:")
         print(' '.join(possible_moves) if possible_moves else '(none)')
 
