@@ -160,6 +160,9 @@ class GameGUI:
         uniq_tag = next(t for t in tags if t.startswith("piece_"))
         sq = self.tag_to_square[uniq_tag]
         piece = self.board.piece_at(sq)
+        # ignore clicks when no piece found
+        if piece is None:
+            return
         if not self.free_play.get() and piece.color != self.current_player:
             return
 
