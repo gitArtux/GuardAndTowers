@@ -2,7 +2,7 @@ import sys
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 import random
-
+import copy
 import numpy as np
 
 from colorama import init, Fore, Back, Style
@@ -401,7 +401,7 @@ class Board:
 def main():
     from evaluation import find_best_move
     board = Board()
-    player = 'b'           # blue starts
+    player = 'r'           # red starts
     opponent = {'b': 'r', 'r': 'b'}
 
     while True:
@@ -410,10 +410,11 @@ def main():
         turn_color = Fore.BLUE if player == 'b' else Fore.RED
         turn_name = 'Blue' if player == 'b' else 'Red'
         print(f"\nTurn – {turn_color}{turn_name}{Style.RESET_ALL}")
+        print(f"Board FEN: {board.export_fen(player)}")
         print("\nPossible moves:")
         print(' '.join(possible_moves) if possible_moves else '(none)')
 
-        best_search_move = find_best_move(board, player)
+        best_search_move = find_best_move(copy.deepcopy(board), player)
         print(f'\nBest AI move: {best_search_move}')
 
         # prompt & parse

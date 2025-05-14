@@ -5,6 +5,7 @@ from guard_towers import Board, coord_to_xy, xy_to_coord, BOARD_SIZE, parse_move
 import numpy as np
 from evaluation import find_best_move
 import threading
+import copy
 
 import sys
 import os
@@ -32,8 +33,8 @@ class GameGUI:
         self.root.title("Guard & Towers")
 
         self.board = Board()
-        self.current_player = 'b'
-        self.opponent = {'b': 'r', 'r': 'b'}
+        self.current_player = 'r'
+        self.opponent = {'r': 'b', 'b': 'r'}
 
         self.canvas = tk.Canvas(root,
                                 width=SQUARE*BOARD_SIZE + LEFT_MARGIN,
@@ -41,7 +42,7 @@ class GameGUI:
                                 highlightthickness=0)
         self.canvas.grid(row=0, column=0, rowspan=BOARD_SIZE, padx=10, pady=10)
 
-        self.status = tk.StringVar(value="Turn: Blue")
+        self.status = tk.StringVar(value="Turn: Red")
         tk.Label(root, textvariable=self.status,
                  font=("Arial", 14)).grid(row=0, column=1, sticky="n")
 
@@ -280,7 +281,7 @@ class GameGUI:
     def update_best_move_label(self):
         # run AI search off the main thread to keep UI responsive
         def search():
-            best = find_best_move(self.board, self.current_player)
+            best = find_best_move(copy.deepcopy(self.board), self.current_player)
             text = f"AI Move: {best if best else 'None'}"
             self.root.after(0, lambda: self.best_move_label.config(text=text))
         threading.Thread(target=search, daemon=True).start()
@@ -304,7 +305,7 @@ class GameGUI:
         self.animate_move(frm, to, n, do_random)
 
     def best_ai_move(self):
-        best = find_best_move(self.board, self.current_player)
+        best = find_best_move(copy.deepcopy(self.board), self.current_player)
         if not best:
             messagebox.showinfo("No moves", "No AI move available.")
             return
