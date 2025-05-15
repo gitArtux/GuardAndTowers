@@ -126,7 +126,7 @@ std::string extract_FEN_Moves(uint64_t (&moves)[24][2]) {
 
         while(startpos) {
             extract_move(to, from, startpos, endpos);
-            result += FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) + ", "; // Add the move to the result string
+            result += FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) + " "; // Add the move to the result string
         }
     }
     return result;
