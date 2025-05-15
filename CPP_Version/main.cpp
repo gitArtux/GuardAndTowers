@@ -2,8 +2,18 @@
 #include "board.hpp"
 
 int main() {
-    
-    std::cout << "Test" << std::endl;
-    test_board_link("Test link");
+    uint64_t moves[MAX_DEPTH][24][2];
+    uint64_t figuresB[7];
+    uint64_t figuresR[7];
+    uint8_t figuresB_2d[49];
+    uint8_t figuresR_2d[49];
+    uint64_t guardB;
+    uint64_t guardR;
+    bool isBlueTurn;
+    int depth;
+
+    std::string fen_pos = "r1r11RG1r1r1/2r11r12/3r13/7/3b13/2b11b12/b1b11BG1b1b1 r";
+    set_board(fen_pos, moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
+    print_board(figuresB, figuresR, guardB, guardR);
     return 0;
 }

@@ -4,6 +4,7 @@
 
 // Exports
 #include "calculations.hpp"
+#include <iostream>
 
 
 using namespace masks;
@@ -53,13 +54,13 @@ void move_generation(uint64_t (&moves)[24][2], uint64_t(&figuresB)[7], uint64_t 
     uint64_t endpos_4 = (guardB & MASK_RIGHT_MOVES[1][0]) >> shift_1 & not_figB;
     
     moves[0][0] |= endpos_1 >> shift_0;
-    moves[0][1] |= endpos_1 | mask_type;
+    moves[0][1] |= endpos_1;
     moves[1][0] |= endpos_2 >> shift_1;
-    moves[1][1] |= endpos_2 | mask_type;
+    moves[1][1] |= endpos_2;
     moves[2][0] |= endpos_3 << shift_0;
-    moves[2][1] |= endpos_3 | mask_type;
+    moves[2][1] |= endpos_3;
     moves[3][0] |= endpos_4 << shift_1;
-    moves[3][1] |= endpos_4 | mask_type;
+    moves[3][1] |= endpos_4;
 }     
 
 void undo(MoveStack stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
@@ -128,7 +129,7 @@ void move(MoveStack stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], 
         figuresR[5] ^= ~(to & -(to & figuresR[5] == 0));  
         figuresR[6] ^= ~(to & -(to & figuresR[6] == 0));  
         int index = __builtin_ctzll(to); 
-        to |= figuresR_2d[index] << CAPTURE_INDEX; // Remove the height from the origin position
+        to |= static_cast<uint64_t>(figuresR_2d[index]) << CAPTURE_INDEX; // Remove the height from the origin position
         figuresR_2d[index] = 0; // Remove the height from the origin position
     }
     // check winconditions --> true if won

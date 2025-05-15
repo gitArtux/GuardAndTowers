@@ -74,7 +74,7 @@ constexpr int SHIFTS[2][6] = {
 
 constexpr int TYPE_INDEX = 61;
 constexpr int CAPTURE_INDEX = 58;
-constexpr int CAPTURE_MASK = 7ULL << CAPTURE_INDEX;
+constexpr uint64_t CAPTURE_MASK = 7ULL << CAPTURE_INDEX;
 constexpr std::uint64_t MASK_1 = 1ULL << TYPE_INDEX; 
 constexpr std::uint64_t MASK_2 = 2ULL << TYPE_INDEX; 
 constexpr std::uint64_t MASK_3 = 3ULL << TYPE_INDEX; 

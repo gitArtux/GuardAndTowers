@@ -7,6 +7,7 @@ struct MoveStack {
     int top = 0;
     inline void push(uint64_t m)  { data[top++] = m; }
     inline uint64_t pop()         { return data[--top]; }
+    inline uint64_t peek()        { return data[top-1]; }
 };
 
 void move_generation(uint64_t (&moves)[24][2], uint64_t(&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR);
