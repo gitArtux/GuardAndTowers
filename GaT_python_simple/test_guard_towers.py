@@ -4,6 +4,28 @@ import unittest
 # Adjust the import below if the file is in a package.
 import guard_towers as gt
 
+from typing import Tuple, Dict, List, Union
+
+# Test cases for generate_moves: map FEN positions to expected move lists
+# FEN strings go from the top of the board to the bottom, and from left to right. As per server
+TEST_CASES_GENERATE_MOVES: Dict[str, Union[str, List[str]]] = {
+    '3RG3/7/7/3b13/7/7/3BG3 b': 'D1-C1-1 D1-D2-1 D1-E1-1 D4-C4-1 D4-D3-1 D4-D5-1 D4-E4-1',
+    '3RG3/7/7/7/7/7/3BG3 r': 'D7-C7-1 D7-D6-1 D7-E7-1',
+    'r1r11RG1r1r1/2r11r12/3r13/7/3b13/2b11b12/b1b11BG1b1b1 r': 'A7-A6-1 A7-B7-1 B7-A7-1 B7-B6-1 B7-C7-1 C6-B6-1 C6-C5-1 C6-C7-1 C6-D6-1 D5-C5-1 D5-D4-1 D5-D6-1 D5-E5-1 D7-C7-1 D7-D6-1 D7-E7-1 E6-D6-1 E6-E5-1 E6-E7-1 E6-F6-1 F7-E7-1 F7-F6-1 F7-G7-1 G7-F7-1 G7-G6-1',
+}
+
+class TestGenerateMoves(unittest.TestCase):
+    def test_generate_moves(self):
+        for fen, expected in TEST_CASES_GENERATE_MOVES.items():
+            board, player = gt.fen_to_board(fen)
+            moves = board.generate_moves(player)
+            # If expected is a string, split into list; otherwise assume list
+            expected_list = expected.split() if isinstance(expected, str) else expected
+            self.assertEqual(
+                sorted(moves), sorted(expected_list),
+                f"Failed for FEN {fen}, got {moves}"
+            )
+
 
 # ----------- helpers -------------------------------------------------
 def empty_board() -> gt.Board:

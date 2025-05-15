@@ -157,8 +157,6 @@ class Board:
         if moving_piece.kind == 'guard':
             if abs(dx) + abs(dy) != 1:
                 raise ValueError('Guard moves exactly one orthogonal square.')
-            if n is not None:
-                raise ValueError('Number suffix is invalid when moving a guard.')
             dest_piece = self.piece_at(to)
             if dest_piece and dest_piece.color == player:
                 raise ValueError('Guard cannot move onto a friendly piece.')
@@ -293,7 +291,7 @@ class Board:
                         if 0 <= xx < BOARD_SIZE and 0 <= yy < BOARD_SIZE:
                             dest_pc = self.grid[yy][xx]
                             if dest_pc is None or dest_pc.color != player:
-                                moves.append(f"{from_sq}-{xy_to_coord(xx, yy)}")
+                                moves.append(f"{from_sq}-{xy_to_coord(xx, yy)}-1")
                     continue  # guard done
 
                 # ----- tower moves
@@ -326,7 +324,7 @@ class Board:
 
                         if legal:
                             to_sq = xy_to_coord(xx, yy)
-                            suffix = '' if n == height else f'-{n}'
+                            suffix = f'-{n}'
                             moves.append(f"{from_sq}-{to_sq}{suffix}")
         return sorted(moves)
 
@@ -372,7 +370,7 @@ class Board:
     def export_fen(self, current_player: str) -> str:
         """Return a FEN-like string of the current position plus whose turn."""
         rows = []
-        for y in range(BOARD_SIZE):
+        for y in reversed(range(BOARD_SIZE)):
             empties = 0
             row_str = ''
             for x in range(BOARD_SIZE):
@@ -391,6 +389,38 @@ class Board:
     
     def zobrist_hash(self) -> int:
         return self.zobrist
+    
+
+def fen_to_board(fen: str) -> Tuple[Board, str]:
+    rows, player = fen.split()
+    rows = rows.split('/')
+    board = Board()
+    # clear any existing pieces
+    for y in range(BOARD_SIZE):
+        for x in range(BOARD_SIZE):
+            board.grid[y][x] = None
+    for rank_idx, row in enumerate(rows):
+        file_idx = 0
+        i = 0
+        while i < len(row):
+            c = row[i]
+            if c.isdigit():
+                file_idx += int(c)
+                i += 1
+            else:
+                code = row[i:i+2]
+                if code[1] == 'G':
+                    color = code[0].lower()
+                    piece = Piece(color, 'guard')
+                else:
+                    height = int(code[1])
+                    color = code[0]
+                    piece = Piece(color, 'tower', height)
+                y = BOARD_SIZE - 1 - rank_idx
+                board.grid[y][file_idx] = piece
+                file_idx += 1
+                i += 2
+    return board, player
 
 
 

@@ -81,7 +81,9 @@ class GameGUI:
 
     def export_position(self) -> str:
         fen = self.board.export_fen(self.current_player)
-        print('Exporting position:', fen)
+        print('\nExporting position:', fen)
+        print('\nPossible moves:')
+        print(' '.join(self.board.generate_moves(self.current_player)) if self.board.generate_moves(self.current_player) else '(none)')
         return fen
 
     # ------------------------------------------------------------------ #
