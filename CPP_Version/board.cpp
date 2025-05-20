@@ -1,4 +1,3 @@
-#include "board.hpp"
 #include "calculations.hpp"
 
 #include <bitset>
@@ -6,6 +5,9 @@
 
 #include <cstring> // For memset
 #include <iostream>
+
+// Export
+#include "board.hpp"
 
 
 void clear_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR) {
@@ -17,7 +19,6 @@ void clear_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], u
     guardB = 0; // Clear the guardB variable
     guardR = 0; // Clear the guardR variable
 }
-
 
 void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth) {
     clear_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR); // Clear the board
@@ -39,7 +40,6 @@ void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], ui
     }
     depth = 0; // Initialize depth for alpha-beta pruning
 }
-
 
 void set_board(std::string fen_pos, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn) {
     // no handling of  invalid FEN strings
@@ -69,11 +69,18 @@ void set_board(std::string fen_pos, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_
             } else if (rows[i][st_ind] == 'b') {
                 uint8_t height = rows[i][++st_ind] - '0';
                 figuresB_2d[42 - i*7 + j] = height; // Set the height in the 2D array
-                figuresB[height - 1] |= 1ULL << (42 - i*7 + j); // Set the bit for the figure
+                uint64_t pos =  1ULL << (42 - i*7 + j); // Set the bit for the figure
+                for (int l = 0; l < height; ++l) {
+                    figuresB[l] |= pos; // Set the bit for the figure
+                }
+
             } else if (rows[i][st_ind] == 'r') {
                 uint8_t height = rows[i][++st_ind] - '0';
                 figuresR_2d[42 - i*7 + j] = height; // Set the height in the 2D array
-                figuresR[height - 1] |= 1ULL << (42 - i*7 + j); // Set the bit for the figure
+                uint64_t pos =  1ULL << (42 - i*7 + j); // Set the bit for the figure
+                for (int l = 0; l < height; ++l) {
+                    figuresR[l] |= pos; // Set the bit for the figure
+                }
 
             } else if (rows[i][st_ind] == 'B') {
                 guardB |= 1ULL << (42 - i*7 + j); // Set the bit for the guard
@@ -96,7 +103,6 @@ void set_board(std::string fen_pos, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_
         }
     }
 }
-
 
 // Pinting and String Operations -----------------------------------------------------------------------------------
 inline std::string FEN_position(std::uint64_t pos) {
@@ -127,8 +133,7 @@ std::string extract_FEN_Moves(uint64_t (&moves)[24][2]) {
     return result;
 }
   
-
-void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
+void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn) {
     // Empty==0, Blue>0, Red<0
     std::string board[7][7];
     for (int i = 0; i < 7; ++i) {
@@ -178,7 +183,8 @@ void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guar
     // underline: \033[4m \033[0m
 
     // Print the board
-    std::cout << "   \033[4mBlues Turn     \033[0m" << "\n";
+    
+    std::cout << "   \033[4m" << (isBlueTurn ? "Blues Turn     " : "Reds Turn      ")  << "\033[0m" << "\n";
     for (int i = 0; i < 7; ++i) {
         std::cout << 7-i << "  "; 
         for (int j = 0; j < 7; ++j) {
@@ -191,4 +197,48 @@ void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guar
    
 void print_Bitboard(std::uint64_t bitboard) {
     std::cout << "Bitboard: " << std::bitset<64>(bitboard) << std::endl; // Print the bitboard in binary format
+}
+
+void get_Fen_move(std::string &fen_move, uint64_t &to, uint64_t &from) {
+    std::string from_str = fen_move.substr(0, 2);
+    std::string to_str = fen_move.substr(3, 2);
+    std::string height_str = fen_move.substr(6, 1);
+    to = (1ULL << (7 - (to_str[0] - 'A') + (to_str[1] - '1') * 7)); // Convert to bitboard
+    from = (1ULL << (7 - (from_str[0] - 'A') + (from_str[1] - '1') * 7)); // Convert to bitboard
+}
+
+inline int check_won(uint64_t guardB, uint64_t guardR, uint64_t figuresB, uint64_t homesquare) {
+    return guardB & homesquare || guardR & (figuresB | guardB); 
+}   
+
+
+// UNFINISHED 
+void play(MoveStack stack, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth, bool playerblue) {
+    init_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth); // Initialize the board
+
+    bool won = false;  
+    print_board(figuresB, figuresR, guardB, guardR); // Print the board
+
+    while(true) {
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+        
+        if (playerblue){
+            std::cout << "Enter your move (e.g. A1-B2-1): ";
+            std::string fen_move;
+            std::cin >> fen_move; // Get the move from the user
+            uint64_t to;
+            uint64_t from;
+            get_Fen_move(fen_move, to, from); // Convert the move to bitboard
+            move(stack, from, to, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB);
+            if (check_won(guardB, guardR, figuresB[0], masks::HOMESQUARE_R)) {
+                std::cout << "Player won!" << std::endl;
+                break;
+            } // Move the piece
+
+        } else {
+            // AI Move
+            std::cout << "AI is thinking..." << std::endl;
+        } 
+
+    }
 }

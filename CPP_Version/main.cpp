@@ -12,8 +12,19 @@ int main() {
     bool isBlueTurn;
     int depth;
 
-    std::string fen_pos = "r1r11RG1r1r1/2r11r12/3r13/7/3b13/2b11b12/b1b11BG1b1b1 r";
+    std::string fen_pos = "r3RG5/r16/b16/7/7/7/3BG3 r";
     set_board(fen_pos, moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
     print_board(figuresB, figuresR, guardB, guardR);
+    print_Bitboard(figuresR[0]);
+    print_Bitboard(figuresR[1]);
+    print_Bitboard(figuresR[2]);
+    print_Bitboard(figuresR[3]);
+    print_Bitboard(figuresR[4]);
+    print_Bitboard(figuresR[5]);
+    print_Bitboard(figuresR[6]);
+
+    
+
+    
     return 0;
 }
