@@ -115,6 +115,15 @@ inline std::string FEN_position(std::uint64_t pos) {
     return letter + std::to_string(y); // Convert to string
 }
 
+
+// TODO in caller function: while (startpos)
+inline void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
+    from = 1ULL << __builtin_ctzll(startpos) ; 
+    to = 1ULL << __builtin_ctzll(endpos) | masks::MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
+    startpos &= startpos - 1; // Clear the lowest set bit
+    endpos &= endpos - 1; // Clear the lowest set bit
+}
+
 std::string extract_FEN_Moves(uint64_t (&moves)[24][2]) {
     std::string result = ""; // Initialize the result string
 
@@ -212,33 +221,33 @@ inline int check_won(uint64_t guardB, uint64_t guardR, uint64_t figuresB, uint64
 }   
 
 
-// UNFINISHED 
-void play(MoveStack stack, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth, bool playerblue) {
-    init_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth); // Initialize the board
+// // UNFINISHED 
+// void play(MoveStack stack, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth, bool playerblue) {
+//     init_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth); // Initialize the board
 
-    bool won = false;  
-    print_board(figuresB, figuresR, guardB, guardR); // Print the board
+//     bool won = false;  
+//     print_board(figuresB, figuresR, guardB, guardR); // Print the board
 
-    while(true) {
-        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+//     while(true) {
+//         print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
         
-        if (playerblue){
-            std::cout << "Enter your move (e.g. A1-B2-1): ";
-            std::string fen_move;
-            std::cin >> fen_move; // Get the move from the user
-            uint64_t to;
-            uint64_t from;
-            get_Fen_move(fen_move, to, from); // Convert the move to bitboard
-            move(stack, from, to, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB);
-            if (check_won(guardB, guardR, figuresB[0], masks::HOMESQUARE_R)) {
-                std::cout << "Player won!" << std::endl;
-                break;
-            } // Move the piece
+//         if (playerblue){
+//             std::cout << "Enter your move (e.g. A1-B2-1): ";
+//             std::string fen_move;
+//             std::cin >> fen_move; // Get the move from the user
+//             uint64_t to;
+//             uint64_t from;
+//             get_Fen_move(fen_move, to, from); // Convert the move to bitboard
+//             move(stack, from, to, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB);
+//             if (check_won(guardB, guardR, figuresB[0], masks::HOMESQUARE_R)) {
+//                 std::cout << "Player won!" << std::endl;
+//                 break;
+//             } // Move the piece
 
-        } else {
-            // AI Move
-            std::cout << "AI is thinking..." << std::endl;
-        } 
+//         } else {
+//             // AI Move
+//             std::cout << "AI is thinking..." << std::endl;
+//         } 
 
-    }
-}
+//     }
+// }
