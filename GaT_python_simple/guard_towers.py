@@ -110,6 +110,9 @@ class Board:
         # Track last move for highlighting
         self.last_move: Optional[Tuple[str, str]] = None
 
+    def copy(self) -> 'Board':
+        return copy.deepcopy(self)
+
     # ---------- setup ------------------------------------------------------#
     def _setup_initial(self):
         # blue side (bottom)

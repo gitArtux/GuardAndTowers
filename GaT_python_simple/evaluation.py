@@ -1,7 +1,12 @@
 import copy
-from typing import Optional, Dict, Tuple
-
+from typing import Optional, Dict
 from guard_towers import Board, parse_move
+
+from collections import defaultdict
+
+# one Counter per ID iteration; keys = ply (0 = root), values = moves generated
+depth_move_counters: dict[int, defaultdict[int, int]] = {}   # <-- add
+
 
 TTEntry = Dict[str, any]
 TranspositionTable = Dict[int, TTEntry]
@@ -72,7 +77,7 @@ def _adaptive_depth(board: Board, player: str, base_depth: int = 5) -> int:
     return base_depth
 
 
-def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool, player: str) -> int:
+def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool, player: str,ply: int = 0, iter_ID: int = 1) -> int:
     """
     Perform the alpha-beta pruning minimax search to evaluate the best achievable score from the current board state.
 
@@ -87,6 +92,10 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
     Returns:
         int: The evaluated score of the board state from the perspective of the player.
     """
+
+    moves = board.generate_moves(player)
+    depth_move_counters[iter_ID][ply] += len(moves)
+
     # Preserve the original alpha–beta window so we can label the TT entry correctly
     alpha_orig = alpha
     beta_orig  = beta
@@ -125,7 +134,7 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
     # Null‑move pruning (depth reduction R = 2)
     if depth > 2:
         board.apply_null_move()
-        score_nm = -alphabeta(board, depth - 1 - 2, -beta, -beta + 1, not maximizing, player)
+        score_nm = -alphabeta(board, depth - 1 - 2, -beta, -beta + 1, not maximizing, player, ply + 1, iter_ID)
         board.unapply_null_move()
         if score_nm >= beta:
             return beta
@@ -146,7 +155,7 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
             except Exception:
                 continue
             try:
-                eval = alphabeta(board, depth - 1, alpha, beta, False, player)
+                eval = alphabeta(board, depth - 1, alpha, beta, False, player, ply + 1, iter_ID)
             finally:
                 board.unapply_move()
             if eval > max_eval:
@@ -167,7 +176,7 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
             except Exception:
                 continue
             try:
-                eval = alphabeta(board, depth - 1, alpha, beta, True, player)
+                eval = alphabeta(board, depth - 1, alpha, beta, True, player, ply + 1, iter_ID)
             finally:
                 board.unapply_move()
             if eval < min_eval:
@@ -214,14 +223,16 @@ def find_best_move(board: Board, player: str, base_depth: int = 5) -> Optional[s
     Returns:
         str: The best move in string format, or None if no moves are available.
     """
-    depth = _adaptive_depth(board, player, base_depth)
+
+    depth = base_depth #_adaptive_depth(board, player, base_depth)
     best_move = None
     best_score = -float('inf')
     root_zob = board.zobrist_hash()
     for d in range(1, depth + 1):
+        depth_move_counters[d] = defaultdict(int)
         alpha = -float('inf') if d == 1 else best_score - 50
         beta  =  float('inf') if d == 1 else best_score + 50
-        best_score = alphabeta(board, d, alpha, beta, True, player)
+        best_score = alphabeta(board, d, alpha, beta, True, player, 0, iter_ID=d)
         best_move = pv_table.get(root_zob, best_move)
     return best_move
 
