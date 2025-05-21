@@ -263,3 +263,73 @@ def quiescence(board: Board, alpha: int, beta: int, player: str) -> int:
         if score > alpha:
             alpha = score
     return alpha
+
+
+# # --- Minimax search without alpha-beta or TT ---
+# def minimax(board: Board, depth: int, maximizing: bool, player: str, ply: int = 0, iter_ID: int = 0) -> int:
+#     opponent = 'r' if player == 'b' else 'b'
+#     # Terminal or leaf node
+#     if depth == 0 or board.find_guard(opponent) is None or board.find_guard(player) is None:
+#         return evaluate(board, player)
+#     # Generate moves for the current side
+#     moves = board.generate_moves(player if maximizing else opponent)
+#     # Count generated moves at this ply for the given iteration ID
+#     if iter_ID in depth_move_counters:
+#         depth_move_counters[iter_ID][ply] += len(moves)
+#     if maximizing:
+#         best = -float('inf')
+#         for move in moves:
+#             frm, to, n = parse_move(move)
+#             board.apply_move(player, frm, to, n)
+#             val = minimax(board, depth - 1, False, player, ply + 1, iter_ID)
+#             board.unapply_move()
+#             if val > best:
+#                 best = val
+#         return best
+#     else:
+#         best = float('inf')
+#         for move in moves:
+#             frm, to, n = parse_move(move)
+#             board.apply_move(opponent, frm, to, n)
+#             val = minimax(board, depth - 1, True, player, ply + 1, iter_ID)
+#             board.unapply_move()
+#             if val < best:
+#                 best = val
+#         return best
+
+
+# def find_best_move(board: Board, player: str, base_depth: int = 5) -> Optional[str]:
+#     """
+#     Find the best move for the given player by searching the game tree up to the specified depth using alpha-beta pruning.
+
+#     The function evaluates all possible moves for the player and selects the move that leads to the highest evaluated score.
+
+#     Args:
+#         board (Board): The current game board state.
+#         player (str): The player color ('b' or 'r') to find the best move for.
+#         base_depth (int, optional): The search depth limit. Defaults to 5.
+
+#     Returns:
+#         str: The best move in string format, or None if no moves are available.
+#     """
+
+#     # Simple minimax search at fixed depth
+#     best_move = None
+#     best_score = -float('inf')
+#     # Initialize move counters for this search depth
+#     depth_move_counters[base_depth] = defaultdict(int)
+#     root_moves = board.generate_moves(player)
+#     # Count root moves at ply 0
+#     depth_move_counters[base_depth][0] = len(root_moves)
+#     # Evaluate each root move
+#     for move in root_moves:
+#         frm, to, n = parse_move(move)
+#         board.apply_move(player, frm, to, n)
+#         score = minimax(board, base_depth - 1, False, player, ply=1, iter_ID=base_depth)
+#         board.unapply_move()
+#         if score > best_score:
+#             best_score = score
+#             best_move = move
+#     return best_move
+
+
