@@ -5,7 +5,7 @@ from guard_towers import Board, parse_move
 from collections import defaultdict
 
 # one Counter per ID iteration; keys = ply (0 = root), values = moves generated
-depth_move_counters: dict[int, defaultdict[int, int]] = {}   # <-- add
+depth_move_counters: dict[int, defaultdict[int, int]] = {}
 
 
 TTEntry = Dict[str, any]
@@ -93,7 +93,9 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
         int: The evaluated score of the board state from the perspective of the player.
     """
 
-    moves = board.generate_moves(player)
+    opponent = 'r' if player == 'b' else 'b'
+    side_to_move = player if maximizing else opponent
+    moves = board.generate_moves(side_to_move)
     depth_move_counters[iter_ID][ply] += len(moves)
 
     # Preserve the original alpha–beta window so we can label the TT entry correctly
@@ -111,7 +113,6 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
             return dest.height
         return 0
 
-    opponent = 'r' if player == 'b' else 'b'
     zobrist = board.zobrist_hash()
     entry = transposition_table.get(zobrist)
 
@@ -146,7 +147,7 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
     best_move = None
     if maximizing:
         max_eval = -float('inf')
-        moves = board.generate_moves(player)
+        moves = board.generate_moves(player)  # same side as root when maximizing branch
         moves.sort(key=move_sort_key, reverse=True)
         for move in moves:
             try:
@@ -167,7 +168,6 @@ def alphabeta(board: Board, depth: int, alpha: int, beta: int, maximizing: bool,
         score = max_eval
     else:
         min_eval = float('inf')
-        moves = board.generate_moves(opponent)
         moves.sort(key=move_sort_key, reverse=True)
         for move in moves:
             try:
@@ -232,7 +232,7 @@ def find_best_move(board: Board, player: str, base_depth: int = 5) -> Optional[s
         depth_move_counters[d] = defaultdict(int)
         alpha = -float('inf') if d == 1 else best_score - 50
         beta  =  float('inf') if d == 1 else best_score + 50
-        best_score = alphabeta(board, d, alpha, beta, True, player, 0, iter_ID=d)
+        best_score = alphabeta(board, d, alpha, beta, True, player, 1, iter_ID=d)
         best_move = pv_table.get(root_zob, best_move)
     return best_move
 
@@ -265,71 +265,70 @@ def quiescence(board: Board, alpha: int, beta: int, player: str) -> int:
     return alpha
 
 
-# # --- Minimax search without alpha-beta or TT ---
-# def minimax(board: Board, depth: int, maximizing: bool, player: str, ply: int = 0, iter_ID: int = 0) -> int:
-#     opponent = 'r' if player == 'b' else 'b'
-#     # Terminal or leaf node
-#     if depth == 0 or board.find_guard(opponent) is None or board.find_guard(player) is None:
-#         return evaluate(board, player)
-#     # Generate moves for the current side
-#     moves = board.generate_moves(player if maximizing else opponent)
-#     # Count generated moves at this ply for the given iteration ID
-#     if iter_ID in depth_move_counters:
-#         depth_move_counters[iter_ID][ply] += len(moves)
-#     if maximizing:
-#         best = -float('inf')
-#         for move in moves:
-#             frm, to, n = parse_move(move)
-#             board.apply_move(player, frm, to, n)
-#             val = minimax(board, depth - 1, False, player, ply + 1, iter_ID)
-#             board.unapply_move()
-#             if val > best:
-#                 best = val
-#         return best
-#     else:
-#         best = float('inf')
-#         for move in moves:
-#             frm, to, n = parse_move(move)
-#             board.apply_move(opponent, frm, to, n)
-#             val = minimax(board, depth - 1, True, player, ply + 1, iter_ID)
-#             board.unapply_move()
-#             if val < best:
-#                 best = val
-#         return best
+# --- Minimax search without alpha-beta or TT ---
+def minimax(board: Board, depth: int, maximizing: bool, player: str, ply: int = 0, iter_ID: int = 0) -> int:
+    opponent = 'r' if player == 'b' else 'b'
+    # Generate moves for the current side and log them *before* any early return
+    moves = board.generate_moves(player if maximizing else opponent)
+    if iter_ID in depth_move_counters:
+        depth_move_counters[iter_ID][ply] += len(moves)
+
+    # Terminal or leaf node
+    if depth == 0 or board.find_guard(opponent) is None or board.find_guard(player) is None:
+        return evaluate(board, player)
+    # Count generated moves at this ply for the given iteration ID
+    if maximizing:
+        best = -float('inf')
+        for move in moves:
+            frm, to, n = parse_move(move)
+            board.apply_move(player, frm, to, n)
+            val = minimax(board, depth - 1, False, player, ply + 1, iter_ID)
+            board.unapply_move()
+            if val > best:
+                best = val
+        return best
+    else:
+        best = float('inf')
+        for move in moves:
+            frm, to, n = parse_move(move)
+            board.apply_move(opponent, frm, to, n)
+            val = minimax(board, depth - 1, True, player, ply + 1, iter_ID)
+            board.unapply_move()
+            if val < best:
+                best = val
+        return best
 
 
-# def find_best_move(board: Board, player: str, base_depth: int = 5) -> Optional[str]:
-#     """
-#     Find the best move for the given player by searching the game tree up to the specified depth using alpha-beta pruning.
+def find_best_move_MM(board: Board, player: str, base_depth: int = 5) -> Optional[str]:
+    """
+    Find the best move for the given player by searching the game tree up to the specified depth using alpha-beta pruning.
 
-#     The function evaluates all possible moves for the player and selects the move that leads to the highest evaluated score.
+    The function evaluates all possible moves for the player and selects the move that leads to the highest evaluated score.
 
-#     Args:
-#         board (Board): The current game board state.
-#         player (str): The player color ('b' or 'r') to find the best move for.
-#         base_depth (int, optional): The search depth limit. Defaults to 5.
+    Args:
+        board (Board): The current game board state.
+        player (str): The player color ('b' or 'r') to find the best move for.
+        base_depth (int, optional): The search depth limit. Defaults to 5.
 
-#     Returns:
-#         str: The best move in string format, or None if no moves are available.
-#     """
+    Returns:
+        str: The best move in string format, or None if no moves are available.
+    """
 
-#     # Simple minimax search at fixed depth
-#     best_move = None
-#     best_score = -float('inf')
-#     # Initialize move counters for this search depth
-#     depth_move_counters[base_depth] = defaultdict(int)
-#     root_moves = board.generate_moves(player)
-#     # Count root moves at ply 0
-#     depth_move_counters[base_depth][0] = len(root_moves)
-#     # Evaluate each root move
-#     for move in root_moves:
-#         frm, to, n = parse_move(move)
-#         board.apply_move(player, frm, to, n)
-#         score = minimax(board, base_depth - 1, False, player, ply=1, iter_ID=base_depth)
-#         board.unapply_move()
-#         if score > best_score:
-#             best_score = score
-#             best_move = move
-#     return best_move
-
-
+    # Simple minimax search at fixed depth
+    best_move = None
+    best_score = -float('inf')
+    # Initialize move counters for this search depth
+    depth_move_counters[base_depth] = defaultdict(int)
+    root_moves = board.generate_moves(player)
+    # Count root moves at ply 1 (root ply is 1)
+    depth_move_counters[base_depth][1] = len(root_moves)  # ply 1 = root
+    # Evaluate each root move
+    for move in root_moves:
+        frm, to, n = parse_move(move)
+        board.apply_move(player, frm, to, n)
+        score = minimax(board, base_depth - 1, False, player, ply=2, iter_ID=base_depth)
+        board.unapply_move()
+        if score > best_score:
+            best_score = score
+            best_move = move
+    return best_move
