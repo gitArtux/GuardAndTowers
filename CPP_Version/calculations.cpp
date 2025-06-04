@@ -11,6 +11,9 @@
 
 using namespace masks;
 
+
+
+
 // works for both players, just switch R and B arguments
 void move_generation(uint64_t (&moves)[24][2], uint64_t(&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
     int adress_count = 0; // Reset adress count for the new generation
@@ -35,24 +38,24 @@ void move_generation(uint64_t (&moves)[24][2], uint64_t(&figuresB)[7], uint64_t 
         uint64_t mask_type = MASK_TYPE[s];
 
         // calculte the end positions
-        uint64_t endpos_1 = (figsB & MASK_LEFT_MOVES[0][s]) << shift_0 & blocked_1;
-        uint64_t endpos_2 = (figsB & MASK_LEFT_MOVES[1][s]) << shift_1 & blocked_2;
-        uint64_t endpos_3 = (figsB & MASK_RIGHT_MOVES[0][s]) >> shift_0 & blocked_3; 
-        uint64_t endpos_4 = (figsB & MASK_RIGHT_MOVES[1][s]) >> shift_1 & blocked_4; 
+        uint64_t endpos_1 = (figsB & MASK_LEFT_MOVES[0][s])  << shift_0 & blocked_1 & clear_mask_B;
+        uint64_t endpos_2 = (figsB & MASK_LEFT_MOVES[1][s])  << shift_1 & blocked_2 & clear_mask_B;
+        uint64_t endpos_3 = (figsB & MASK_RIGHT_MOVES[0][s]) >> shift_0 & blocked_3 & clear_mask_B; 
+        uint64_t endpos_4 = (figsB & MASK_RIGHT_MOVES[1][s]) >> shift_1 & blocked_4 & clear_mask_B; 
         
-        moves[adress_count][0] = (endpos_1 & clear_mask_B) >> shift_0;
+        moves[adress_count][0] = endpos_1 >> shift_0;
         moves[adress_count++][1] = endpos_1 | mask_type;
         blocked_1 &= -static_cast<uint64_t>((endpos_1 & blocks) == 0);
 
-        moves[adress_count][0] = (endpos_2 & clear_mask_B) >> shift_1;
+        moves[adress_count][0] = endpos_2 >> shift_1;
         moves[adress_count++][1] = endpos_2 | mask_type;
         blocked_2 &= -static_cast<uint64_t>((endpos_2 & blocks) == 0);
 
-        moves[adress_count][0] = (endpos_3 & clear_mask_B) << shift_0;
+        moves[adress_count][0] = endpos_3 << shift_0;
         moves[adress_count++][1] = endpos_3 | mask_type;
         blocked_3 &= -static_cast<uint64_t>((endpos_3 & blocks) == 0);
 
-        moves[adress_count][0] = (endpos_4 & clear_mask_B) << shift_1;
+        moves[adress_count][0] = endpos_4 << shift_1;
         moves[adress_count++][1] = endpos_4 | mask_type; 
         blocked_4 &= -static_cast<uint64_t>((endpos_4 & blocks) == 0); 
     }
@@ -151,12 +154,13 @@ void move(MoveStack stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], 
 }
 
 // TODO in caller function: while (startpos)
-void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
+inline void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
     from = 1ULL << __builtin_ctzll(startpos) ; 
     to = 1ULL << __builtin_ctzll(endpos) | MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
     startpos &= startpos - 1; // Clear the lowest set bit
     endpos &= endpos - 1; // Clear the lowest set bit
 }
+
 
 uint64_t hit_moves(uint64_t (&figuresE)[7], uint64_t (&figuresP)[7], uint64_t guardE, uint64_t guardP) {
     uint64_t hit_moves = 0;

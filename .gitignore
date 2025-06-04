@@ -5,3 +5,4 @@
 *.obj
 
 /CPP_Version/build
+/CPP_Version/calc_alt.cpp
