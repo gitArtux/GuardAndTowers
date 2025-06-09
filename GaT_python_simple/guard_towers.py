@@ -14,7 +14,7 @@ BOARD_SIZE = 7
 DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1)]  # E, W, N, S
 
 
-random.seed(42)  # Optional: seed for reproducibility
+random.seed(42)
 
 
 ZOBRIST_TABLE = {
