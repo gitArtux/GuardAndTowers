@@ -28,16 +28,11 @@ std::vector<std::array<uint64_t,2>> exp_move_gen(uint64_t (&figuresB)[7], uint64
             uint64_t shift_0 = SHIFTS[0][h];
             uint64_t shift_1 = SHIFTS[1][h];
 
-            uint64_t mask1 = blocked_1 & clear_mask_B;
-            uint64_t mask2 = blocked_2 & clear_mask_B;
-            uint64_t mask3 = blocked_3 & clear_mask_B;
-            uint64_t mask4 = blocked_4 & clear_mask_B;
-
             // calculte the end positions
-            uint64_t endpos_1 = (fig & MASK_LEFT_MOVES[0][h])  << shift_0 & mask1;
-            uint64_t endpos_2 = (fig & MASK_LEFT_MOVES[1][h])  << shift_1 & mask2;
-            uint64_t endpos_3 = (fig & MASK_RIGHT_MOVES[0][h]) >> shift_0 & mask3; 
-            uint64_t endpos_4 = (fig & MASK_RIGHT_MOVES[1][h]) >> shift_1 & mask4;
+            uint64_t endpos_1 = (fig & MASK_LEFT_MOVES[0][h])  << shift_0 & (blocked_1 & clear_mask_B);
+            uint64_t endpos_2 = (fig & MASK_LEFT_MOVES[1][h])  << shift_1 & (blocked_2 & clear_mask_B);
+            uint64_t endpos_3 = (fig & MASK_RIGHT_MOVES[0][h]) >> shift_0 & (blocked_3 & clear_mask_B); 
+            uint64_t endpos_4 = (fig & MASK_RIGHT_MOVES[1][h]) >> shift_1 & (blocked_4 & clear_mask_B);
 
             dests |= endpos_1;
             blocked_1 &= -static_cast<uint64_t>((endpos_1 & blocks) == 0);
@@ -70,4 +65,6 @@ std::vector<std::array<uint64_t,2>> exp_move_gen(uint64_t (&figuresB)[7], uint64
 
     return moves;
 }
+
+
 
