@@ -1,0 +1,1 @@
+start the client with your console in the same dir using 'python client.py'

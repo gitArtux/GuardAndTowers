@@ -14,7 +14,7 @@ BOARD_SIZE = 7
 DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1)]  # E, W, N, S
 
 
-random.seed(42)
+random.seed(42)  # Optional: seed for reproducibility
 
 
 ZOBRIST_TABLE = {
@@ -28,6 +28,36 @@ ZOBRIST_TABLE = {
 
 # Zobrist side-to-move bit
 ZOBRIST_SIDE = random.getrandbits(64)
+
+# ---------------------------------------------------------------------------#
+# Bit-board helpers  ❱❱  NEW
+# ---------------------------------------------------------------------------#
+NUM_SQ  = BOARD_SIZE * BOARD_SIZE          # 49
+
+def idx(x: int, y: int) -> int:           # 0-based square index
+    return y * BOARD_SIZE + x             # 0..48  (A1 = 0, B1 = 1 …)
+def bit(x: int, y: int) -> int:
+    return 1 << idx(x, y)
+def idx_to_xy(i: int) -> tuple[int, int]:
+    return i % BOARD_SIZE, i // BOARD_SIZE
+
+# Map each direction to its index for ray-mask lookup
+DIR_IDX = {DIRS[i]: i for i in range(len(DIRS))}
+
+# Precompute ray masks: for each square and each direction, mask of intermediate squares for each distance
+RAY_MASK = [[[0] * (BOARD_SIZE - 1) for _ in DIRS] for _ in range(NUM_SQ)]
+for sq in range(NUM_SQ):
+    x0, y0 = idx_to_xy(sq)
+    for d, (dx, dy) in enumerate(DIRS):
+        for dist in range(1, BOARD_SIZE):
+            mask = 0
+            for step in range(1, dist):
+                x1 = x0 + dx * step
+                y1 = y0 + dy * step
+                if 0 <= x1 < BOARD_SIZE and 0 <= y1 < BOARD_SIZE:
+                    mask |= bit(x1, y1)
+            RAY_MASK[sq][d][dist - 1] = mask
+
 
 
 
@@ -89,40 +119,57 @@ def parse_move(move: str) -> Tuple[str, str, Optional[int]]:
 # ---------------------------------------------------------------------------#
 class Board:
     def __init__(self):
-        self.grid: List[List[Optional[Piece]]] = [
+                # ---- bit-boards ---------------------------------------------------#
+        self.occ   = {'b': 0, 'r': 0}          # all blue / red pieces
+        self.guard = {'b': 0, 'r': 0}          # the single guards
+        # 7 tower-height layers per colour (index 0 ⇒ height 1 … index 6 ⇒ height 7)
+        self.tower = {'b': [0]*7, 'r': [0]*7}
+
+        self.grid: list[list[Optional[Piece]]] = [
             [None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)
         ]
         self._setup_initial()
-        # Initialize incremental zobrist hash
+
+        # Zobrist -----------------------------------------------------------#
         self.zobrist = 0
         for y in range(BOARD_SIZE):
             for x in range(BOARD_SIZE):
-                piece = self.grid[y][x]
-                if piece:
-                    height = piece.height if piece.kind == 'tower' else 1
-                    key = (x, y, piece.color, piece.kind, height)
-                    self.zobrist ^= ZOBRIST_TABLE[key]
-        # Initialize side-to-move (blue starts) and include in hash
+                p = self.grid[y][x]
+                if not p: continue
+                h = 1 if p.kind == 'guard' else p.height
+                self.zobrist ^= ZOBRIST_TABLE[(x, y, p.color, p.kind, h)]
         self.side_to_move = 'b'
         self.zobrist ^= ZOBRIST_SIDE
-        # Stack for undoing moves
+
         self.move_stack = []
-        # Track last move for highlighting
-        self.last_move: Optional[Tuple[str, str]] = None
+        self.last_move  = None
+
 
     def copy(self) -> 'Board':
         return copy.deepcopy(self)
 
     # ---------- setup ------------------------------------------------------#
     def _setup_initial(self):
-        # blue side (bottom)
-        self.place('D1', Piece('b', 'guard'))
-        for sq in ('A1', 'B1', 'F1', 'G1', 'C2', 'E2', 'D3'):
-            self.place(sq, Piece('b', 'tower'))
-        # red side (top)
-        self.place('D7', Piece('r', 'guard'))
-        for sq in ('A7', 'B7', 'F7', 'G7', 'C6', 'E6', 'D5'):
-            self.place(sq, Piece('r', 'tower'))
+        def _put(sq: str, piece: Piece):
+            x, y = coord_to_xy(sq)
+            self.grid[y][x] = piece
+            b = bit(x, y)
+            self.occ[piece.color] |= b
+            if piece.kind == 'guard':
+                self.guard[piece.color] = b
+            else:
+                self.tower[piece.color][piece.height-1] |= b
+
+        # ---- blue ---------------------------------------------------------#
+        _put('D1', Piece('b', 'guard'))
+        for sq in ('A1','B1','F1','G1','C2','E2','D3'):
+            _put(sq, Piece('b', 'tower'))
+
+        # ---- red ----------------------------------------------------------#
+        _put('D7', Piece('r', 'guard'))
+        for sq in ('A7','B7','F7','G7','C6','E6','D5'):
+            _put(sq, Piece('r', 'tower'))
+
 
     # ---------- low‑level access ------------------------------------------#
     def piece_at(self, coord: str) -> Optional[Piece]:
@@ -130,8 +177,27 @@ class Board:
         return self.grid[y][x]
 
     def place(self, coord: str, piece: Optional[Piece]):
-        x, y = coord_to_xy(coord)
+        x, y   = coord_to_xy(coord)
+        b      = bit(x, y)
+        prev   = self.grid[y][x]
+
+        # ---- remove previous ---------------------------------------------#
+        if prev:
+            self.occ[prev.color] &= ~b
+            if prev.kind == 'guard':
+                self.guard[prev.color] = 0
+            else:
+                self.tower[prev.color][prev.height-1] &= ~b
+
+        # ---- add new ------------------------------------------------------#
         self.grid[y][x] = piece
+        if piece:
+            self.occ[piece.color] |= b
+            if piece.kind == 'guard':
+                self.guard[piece.color] = b
+            else:
+                self.tower[piece.color][piece.height-1] |= b
+
 
     # ---------- move execution --------------------------------------------#
     def apply_move(self, player: str, frm: str, to: str, n: Optional[int]) -> None:
@@ -277,68 +343,78 @@ class Board:
         self.side_to_move = 'r' if self.side_to_move == 'b' else 'b'
 
     # ---------- move generation -------------------------------------------#
-    def generate_moves(self, player: str) -> List[str]:
-        """Return a list of all legal moves for `player` in move‑notation."""
-        moves: List[str] = []
-        for y in range(BOARD_SIZE):
-            for x in range(BOARD_SIZE):
-                pc = self.grid[y][x]
-                if not pc or pc.color != player:
-                    continue
-                from_sq = xy_to_coord(x, y)
+    def generate_moves(self, player: str) -> list[str]:
+        moves = []
+        opp   = 'r' if player == 'b' else 'b'
+        occ   = self.occ['b'] | self.occ['r']
 
-                # ----- guard moves
-                if pc.kind == 'guard':
-                    for dx, dy in DIRS:
-                        xx, yy = x + dx, y + dy
-                        if 0 <= xx < BOARD_SIZE and 0 <= yy < BOARD_SIZE:
-                            dest_pc = self.grid[yy][xx]
-                            if dest_pc is None or dest_pc.color != player:
-                                moves.append(f"{from_sq}-{xy_to_coord(xx, yy)}-1")
-                    continue  # guard done
+        # -------- guards ---------------------------------------------------#
+        gbit = self.guard[player]
+        if gbit:
+            i      = (gbit & -gbit).bit_length() - 1
+            gx, gy = idx_to_xy(i)
+            for dx, dy in DIRS:
+                nx, ny = gx+dx, gy+dy
+                if 0 <= nx < BOARD_SIZE and 0 <= ny < BOARD_SIZE:
+                    if not (self.occ[player] & bit(nx, ny)):
+                        moves.append(f"{xy_to_coord(gx,gy)}-{xy_to_coord(nx,ny)}-1")
 
-                # ----- tower moves
-                height = pc.height
-                for n in range(1, height + 1):         # number of stones moved
-                    for dx, dy in DIRS:
-                        xx, yy = x + dx * n, y + dy * n
-                        if not (0 <= xx < BOARD_SIZE and 0 <= yy < BOARD_SIZE):
-                            continue
+        # -------- towers ---------------------------------------------------#
+        towers_all = 0
+        heights_by_sq = {}
+        for h in range(7):
+            layer = self.tower[player][h]
+            towers_all |= layer
+            bb = layer
+            while bb:
+                ls1 = bb & -bb
+                sq  = (ls1.bit_length()-1)
+                heights_by_sq[sq] = h+1   # actual height
+                bb ^= ls1
 
-                        # clear path?
-                        blocked = False
-                        for step in range(1, n):
-                            if self.grid[y + dy * step][x + dx * step] is not None:
-                                blocked = True
-                                break
-                        if blocked:
-                            continue
+        while towers_all:
+            ls1 = towers_all & -towers_all
+            sq  = (ls1.bit_length()-1)
+            x, y = idx_to_xy(sq)
+            ht    = heights_by_sq[sq]
+            from_sq = xy_to_coord(x, y)
 
-                        dest_pc = self.grid[yy][xx]
-                        legal = False
-                        if dest_pc is None:
+            for take in range(1, ht+1):
+                dist = take
+                for dx, dy in DIRS:
+                    nx, ny = x + dx*dist, y + dy*dist
+                    if not (0 <= nx < BOARD_SIZE and 0 <= ny < BOARD_SIZE):
+                        continue
+                    # path clear via precomputed ray mask
+                    dir_idx = DIR_IDX[(dx, dy)]
+                    if occ & RAY_MASK[sq][dir_idx][take - 1]:
+                        continue
+                    dest_piece = self.piece_at(xy_to_coord(nx, ny))
+                    legal = False
+                    if dest_piece is None:
+                        legal = True
+                    elif dest_piece.color == player:
+                        legal = dest_piece.kind == 'tower'
+                    else:  # capture?
+                        if dest_piece.kind == 'guard':
                             legal = True
-                        elif dest_pc.color == player:
-                            legal = dest_pc.kind == 'tower'  # merge with friendly tower
-                        else:
-                            # capture?
-                            temp_top = Piece(player, 'tower', n)
-                            legal = temp_top.can_capture(dest_pc, n)
+                        elif take >= dest_piece.height:
+                            legal = True
+                    if legal:
+                        to_sq = xy_to_coord(nx, ny)
+                        moves.append(f"{from_sq}-{to_sq}-{take}")
+            towers_all ^= ls1
+        return moves
 
-                        if legal:
-                            to_sq = xy_to_coord(xx, yy)
-                            suffix = f'-{n}'
-                            moves.append(f"{from_sq}-{to_sq}{suffix}")
-        return sorted(moves)
 
     # ---------- utility ----------------------------------------------------#
     def find_guard(self, color: str) -> Optional[str]:
-        for y in range(BOARD_SIZE):
-            for x in range(BOARD_SIZE):
-                pc = self.grid[y][x]
-                if pc and pc.color == color and pc.kind == 'guard':
-                    return xy_to_coord(x, y)
-        return None
+        b = self.guard[color]
+        if not b:
+            return None
+        i = (b & -b).bit_length() - 1
+        x, y = idx_to_xy(i)
+        return xy_to_coord(x, y)
 
     def is_castle(self, coord: str, color: str) -> bool:
         # blue's castle D1, red's D7
@@ -395,56 +471,36 @@ class Board:
     
 
 def fen_to_board(fen: str) -> Tuple[Board, str]:
-    placement, side = fen.strip().split()
-    rows = placement.split('/')
-    if len(rows) != BOARD_SIZE:
-        raise ValueError("FEN must have 7 ranks")
-
-    # start from an empty board
+    rows, player = fen.split()
+    rows = rows.split('/')
     board = Board()
-    board.grid = [[None]*BOARD_SIZE for _ in range(BOARD_SIZE)]
-    board.zobrist = 0
-
+    # clear any existing pieces
+    for y in range(BOARD_SIZE):
+        for x in range(BOARD_SIZE):
+            board.grid[y][x] = None
     for rank_idx, row in enumerate(rows):
         file_idx = 0
         i = 0
         while i < len(row):
-            ch = row[i]
-            if ch.isdigit():
-                num = ''
-                while i < len(row) and row[i].isdigit():
-                    num += row[i]
-                    i += 1
-                file_idx += int(num)
-                continue
-
-            colour = ch.lower()          # 'r' or 'b'
-            i += 1
-
-            # --- guard
-            if row[i] == 'G':
-                piece = Piece(colour, 'guard')
+            c = row[i]
+            if c.isdigit():
+                file_idx += int(c)
                 i += 1
             else:
-                # --- tower (height is *one* digit in the official FEN)
-                h = int(row[i])
-                i += 1
-                piece = Piece(colour, 'tower', h)
+                code = row[i:i+2]
+                if code[1] == 'G':
+                    color = code[0].lower()
+                    piece = Piece(color, 'guard')
+                else:
+                    height = int(code[1])
+                    color = code[0]
+                    piece = Piece(color, 'tower', height)
+                y = BOARD_SIZE - 1 - rank_idx
+                board.grid[y][file_idx] = piece
+                file_idx += 1
+                i += 2
+    return board, player
 
-            x, y = file_idx, BOARD_SIZE - 1 - rank_idx
-            board.grid[y][x] = piece
-            height = piece.height if piece.kind == 'tower' else 1
-            board.zobrist ^= ZOBRIST_TABLE[(x, y, piece.color, piece.kind, height)]
-            file_idx += 1
-
-        if file_idx != BOARD_SIZE:
-            raise ValueError("Rank length mismatch")
-
-    board.side_to_move = side
-    if side == 'b':
-        board.zobrist ^= ZOBRIST_SIDE
-
-    return board, side
 
 
 
@@ -467,7 +523,7 @@ def main():
         print("\nPossible moves:")
         print(' '.join(possible_moves) if possible_moves else '(none)')
 
-        best_search_move = find_best_move(copy.deepcopy(board), player)
+        best_search_move = find_best_move(copy.deepcopy(board), player, base_depth=7)
         print(f'\nBest AI move: {best_search_move}')
 
         # prompt & parse
