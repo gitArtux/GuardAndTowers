@@ -33,16 +33,16 @@ bool same_elements_sorted(std::vector<std::string_view> A,
     return std::equal(A.begin(), A.end(), B.begin());
 }
 
-void test_move_generation(std::string FEN_position, std::string FEN_moves_expected, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int depth) {
-    set_board(FEN_position,moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn); // Set the board to a specific position
+void test_move_generation(std::string FEN_position, std::string FEN_moves_expected, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int depth) {
+    set_board(FEN_position, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn); // Set the board to a specific position
     
     std::string fen_moves;
     if (isBlueTurn){
-        move_generation(moves[0], figuresB, figuresR, guardB, guardR);
-        fen_moves = extract_FEN_Moves(moves[0]); // Extract the FEN moves
+        Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+        fen_moves = extract_FEN_Moves(moves); // Extract the FEN moves
     } else {
-        move_generation(moves[0], figuresR, figuresB, guardR, guardB);
-        fen_moves = extract_FEN_Moves(moves[0]); // Extract the FEN moves
+        Moves moves = move_generation(figuresR, figuresB, figuresB_2d, guardR, guardB);
+        fen_moves = extract_FEN_Moves(moves); // Extract the FEN moves
     }
 
     std::vector<std::string_view> tokens_expected = split(FEN_moves_expected);
@@ -57,7 +57,7 @@ void test_move_generation(std::string FEN_position, std::string FEN_moves_expect
         std::cout << "\033[31mX\033[0m Test failed for: '" << FEN_position << "' " << std::endl;
         std::cout << "Expected moves: " << FEN_moves_expected << std::endl;
         std::cout << "Generated moves: " << fen_moves << std::endl;
-        print_board(figuresB, figuresR, guardB, guardR); // Print the board
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     }
 }
 
@@ -82,7 +82,6 @@ static const std::map<std::string, std::string> TEST_CASES = {
 
 int main(){
     // Test cases
-    uint64_t moves[MAX_DEPTH][24][2];
     uint64_t figuresB[7];
     uint64_t figuresR[7];
     uint8_t figuresB_2d[49];
@@ -103,7 +102,7 @@ int main(){
         const auto& expected = case_pair.second;
         test_move_generation(
             fen, expected,
-            moves, figuresB, figuresR, figuresB_2d, figuresR_2d,
+            figuresB, figuresR, figuresB_2d, figuresR_2d,
             guardB, guardR, isBlueTurn, depth
         );
     }

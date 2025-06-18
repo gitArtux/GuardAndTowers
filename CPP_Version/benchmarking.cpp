@@ -5,15 +5,20 @@
 #include "board.hpp"
 
 // Benchmarking --------------------------------------------------------------------------------------------------- 
-constexpr int NUM_RUNS = 100000000; // Number of tests to run
-void benchmark_generator(uint64_t (&moves)[24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, int &depth) {
+constexpr int NUM_RUNS = 10000000; // Number of tests to run
+void benchmark_generator(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, int &depth) {
     volatile uint64_t dummy_0 = 0; // Dummy variable to prevent optimization
-    print_Bitboard(figuresB[0]);
+    for (int i = 0; i < 10000; ++i) {
+
+        Moves moves =  move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+        dummy_0 += moves.back()[0] + moves.back()[1]; // Dummy operation to prevent optimization
+
+    }
     auto start = std::chrono::steady_clock::now(); // Start the timer
     for (int i = 0; i < NUM_RUNS; ++i) {
 
-        MoveStack moves =  move_generation(figuresB, figuresR, guardB, guardR);
-        dummy_0 += moves.top;
+        Moves moves =  move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+        dummy_0 += moves.back()[0] + moves.back()[1]; // Dummy operation to prevent optimization
 
     }
     auto end = std::chrono::steady_clock::now(); // Stop the timer
@@ -22,9 +27,11 @@ void benchmark_generator(uint64_t (&moves)[24][2], uint64_t (&figuresB)[7], uint
     std::cout << "Time taken for " << NUM_RUNS << " runs: " << elapsed.count() << " seconds" << std::endl; // Print the elapsed time
 }
 
-void dummy_benchmark(uint64_t (&moves)[24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, int &depth){
-
+void dummy_benchmark(){
     volatile uint64_t dummy_0 = 0; // Dummy variable to prevent optimization
+    for (int i = 0; i < 10000; ++i) {
+         dummy_0 += 54; // Dummy operation
+    }
 
     auto start = std::chrono::steady_clock::now(); // Start the timer
     for (int i = 0; i < NUM_RUNS; ++i) {
@@ -49,9 +56,9 @@ int main() {
 
     std::string fen_pos = "r3RG5/r16/b16/7/7/7/3BG3 r";
     // set_board(fen_pos, moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn); // Set the board to a specific position
-    init_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth); // Set the board to a specific position
-    dummy_benchmark(moves[0], figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, depth);
-    benchmark_generator(moves[0], figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, depth);
+    init_board(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth); // Set the board to a specific position
+    // dummy_benchmark();
+    benchmark_generator(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, depth);
 
     
     return 0;

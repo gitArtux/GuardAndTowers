@@ -10,8 +10,7 @@
 #include "board.hpp"
 
 
-void clear_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR) {
-    std::memset(moves, 0, sizeof(moves)); // Clear the moves array
+void clear_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR) {
     std::memset(figuresB, 0, sizeof(figuresB)); // Clear the figuresB array
     std::memset(figuresR, 0, sizeof(figuresR)); // Clear the figuresR array
     std::memset(figuresB_2d, 0, sizeof(figuresB_2d)); // Clear the figuresB_2d array
@@ -20,8 +19,8 @@ void clear_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], u
     guardR = 0; // Clear the guardR variable
 }
 
-void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth) {
-    clear_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR); // Clear the board
+void init_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth) {
+    clear_board(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR); // Clear the board
     figuresB[0] = 0b0000000000000000000000000000000000000000000000100000101001100011;
     figuresR[0] = 0b0000000000000001100011001010000010000000000000000000000000000000;
 
@@ -41,9 +40,9 @@ void init_board(uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], ui
     depth = 0; // Initialize depth for alpha-beta pruning
 }
 
-void set_board(std::string fen_pos, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn) {
+void set_board(std::string fen_pos, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn) {
     // no handling of  invalid FEN strings
-    clear_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR); // Clear the board
+    clear_board(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR); // Clear the board
     std::string rows[7];
     int counter = 0;
     int l = 0;
@@ -116,28 +115,15 @@ inline std::string FEN_position(std::uint64_t pos) {
 }
 
 
-// TODO in caller function: while (startpos)
-inline void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
-    from = 1ULL << __builtin_ctzll(startpos) ; 
-    to = 1ULL << __builtin_ctzll(endpos) | masks::MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
-    startpos &= startpos - 1; // Clear the lowest set bit
-    endpos &= endpos - 1; // Clear the lowest set bit
-}
 
-std::string extract_FEN_Moves(uint64_t (&moves)[24][2]) {
+
+std::string extract_FEN_Moves(Moves moves) {
     std::string result = ""; // Initialize the result string
-
-    for(int i = 0; i < 4*6; ++i) {
-
-        uint64_t startpos = moves[i][0]; // Get the start positions
-        uint64_t endpos = moves[i][1]; // Get the end position
-        uint64_t to;
-        uint64_t from;
-        uint64_t leaving_height = ((endpos & masks::MASK_STACKHEIGHT) >> masks::TYPE_INDEX); // Get the stack height of the moving part of the figure
-        while(startpos) {
-            extract_move(to, from, startpos, endpos);
+    for (const auto& move : moves) {
+        uint64_t from = move[0];
+        uint64_t to = move[1];   
+        uint64_t leaving_height = ((to & masks::MASK_STACKHEIGHT) >> masks::TYPE_INDEX); // Get the stack height of the moving part of the figure
             result += FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) + " "; // Add the move to the result string
-        }
     }
     return result;
 }

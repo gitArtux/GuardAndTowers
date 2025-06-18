@@ -12,74 +12,74 @@
 
 using namespace masks;
 
-inline void save_to_stack(MoveStack &moves, uint64_t startpos, uint64_t endpos) {
+inline void save_to_stack(Moves &moves, uint64_t startpos, uint64_t endpos) {
     while(startpos) {
         uint64_t from = 1ULL << __builtin_ctzll(startpos); 
         uint64_t to = 1ULL << __builtin_ctzll(endpos) | MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
         startpos &= startpos - 1; // Clear the lowest set bit
         endpos &= endpos - 1; // Clear the lowest set bit
-        moves.push(from);
-        moves.push(to);
+        moves.emplace_back(std::array<uint64_t, 2>{from, to});
     }
 }
 
-inline void save_guard_to_stack(MoveStack &moves, uint64_t startpos, uint64_t endpos) {
-    if(endpos) {
-        moves.push(startpos);
-        moves.push(endpos);
-    }
+inline void save_guard_to_stack(Moves &moves, uint64_t from, uint64_t to) {
+    if(to) moves.emplace_back(std::array<uint64_t, 2>{from, to | MASK_1});
 }
 
-MoveStack move_generation(uint64_t(&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
-    MoveStack moves;
+Moves move_generation(uint64_t(&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint64_t guardB, uint64_t guardR) {
+    Moves moves;
+    moves.reserve(32); // Reserve space for 32 moves
     uint64_t blocked_1 = ONES;
     uint64_t blocked_2 = ONES;
     uint64_t blocked_3 = ONES;
     uint64_t blocked_4 = ONES;
     const uint64_t blocks = figuresB[0] | figuresR[0] | guardB | guardR; // Blocked positions 
 
-    
-    for (int s = 0; s < 6; ++s) {
-        uint64_t figsB = figuresB[s];   
-        if (figsB){
-            uint64_t figsR = figuresR[s];
-            uint64_t clear_mask_B = ~(figuresR[s+1] | guardB);
-            uint64_t shift_0 = SHIFTS[0][s];
-            uint64_t shift_1 = SHIFTS[1][s];
-            uint64_t mask_type = MASK_TYPE[s];
-            uint64_t mask1 = blocked_1 & clear_mask_B;
-            uint64_t mask2 = blocked_2 & clear_mask_B;
-            uint64_t mask3 = blocked_3 & clear_mask_B;
-            uint64_t mask4 = blocked_4 & clear_mask_B;
+    uint64_t figs = figuresB[0]; // Get the figures of player B
+    int i = 0;
+    uint64_t figsB = figuresB[0];
+    while (figs && i < 6) {
+        uint64_t figsB = figuresB[i];   
+        uint64_t figsR = figuresR[i];
+        uint64_t clear_mask_B = ~(figuresR[i+1] | guardB);
+        uint64_t shift_0 = SHIFTS[0][i];
+        uint64_t shift_1 = SHIFTS[1][i];
+        uint64_t mask_type = MASK_TYPE[i];
+        uint64_t mask1 = blocked_1 & clear_mask_B;
+        uint64_t mask2 = blocked_2 & clear_mask_B;
+        uint64_t mask3 = blocked_3 & clear_mask_B;
+        uint64_t mask4 = blocked_4 & clear_mask_B;
 
-            // calculte the end positions
-            uint64_t endpos_1 = (figsB & MASK_LEFT_MOVES[0][s])  << shift_0 & mask1;
-            uint64_t endpos_2 = (figsB & MASK_LEFT_MOVES[1][s])  << shift_1 & mask2;
-            uint64_t endpos_3 = (figsB & MASK_RIGHT_MOVES[0][s]) >> shift_0 & mask3; 
-            uint64_t endpos_4 = (figsB & MASK_RIGHT_MOVES[1][s]) >> shift_1 & mask4;
+        // calculte the end positions
+        uint64_t endpos_1 = (figsB & MASK_LEFT_MOVES[0][i])  << shift_0 & mask1;
+        uint64_t endpos_2 = (figsB & MASK_LEFT_MOVES[1][i])  << shift_1 & mask2;
+        uint64_t endpos_3 = (figsB & MASK_RIGHT_MOVES[0][i]) >> shift_0 & mask3; 
+        uint64_t endpos_4 = (figsB & MASK_RIGHT_MOVES[1][i]) >> shift_1 & mask4;
 
-            save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
-            blocked_1 &= -static_cast<uint64_t>((endpos_1 & blocks) == 0);
-            
-            save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
-            blocked_2 &= -static_cast<uint64_t>((endpos_2 & blocks) == 0);
+        save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
+        blocked_1 &= -static_cast<uint64_t>((endpos_1 & blocks) == 0);
+        
+        save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
+        blocked_2 &= -static_cast<uint64_t>((endpos_2 & blocks) == 0);
 
-            save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
-            blocked_3 &= -static_cast<uint64_t>((endpos_3 & blocks) == 0);
+        save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
+        blocked_3 &= -static_cast<uint64_t>((endpos_3 & blocks) == 0);
 
-            save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
-            blocked_4 &= -static_cast<uint64_t>((endpos_4 & blocks) == 0); 
-        } else break;
+        save_to_stack(moves, endpos_1 >> shift_0, endpos_1 | mask_type);
+        blocked_4 &= -static_cast<uint64_t>((endpos_4 & blocks) == 0); 
+
+        ++i;
+        figsB = figuresB[i];
     }
 
     uint64_t shift_0  = SHIFTS[0][0];
     uint64_t shift_1  = SHIFTS[1][0];
     uint64_t not_figB = ~figuresB[0];
 
-    save_guard_to_stack(moves, guardB, (guardB & MASK_LEFT_MOVES[0][0])  << shift_0 & not_figB);
-    save_guard_to_stack(moves, guardB, (guardB & MASK_LEFT_MOVES[1][0])  << shift_1 & not_figB);
-    save_guard_to_stack(moves, guardB, (guardB & MASK_RIGHT_MOVES[0][0]) >> shift_0 & not_figB);
-    save_guard_to_stack(moves, guardB, (guardB & MASK_RIGHT_MOVES[1][0]) >> shift_1 & not_figB);
+    save_guard_to_stack(moves, guardB, ((guardB & MASK_LEFT_MOVES[0][0])  << shift_0 & not_figB));
+    save_guard_to_stack(moves, guardB, ((guardB & MASK_LEFT_MOVES[1][0])  << shift_1 & not_figB));
+    save_guard_to_stack(moves, guardB, ((guardB & MASK_RIGHT_MOVES[0][0]) >> shift_0 & not_figB));
+    save_guard_to_stack(moves, guardB, ((guardB & MASK_RIGHT_MOVES[1][0]) >> shift_1 & not_figB));
 
     
     return moves;
