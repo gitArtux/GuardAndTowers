@@ -217,7 +217,7 @@ void play(MoveStack stack, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figur
     init_board(moves, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth); // Initialize the board
 
     bool won = false;  
-    print_board(figuresB, figuresR, guardB, guardR); // Print the board
+    print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
 
     while(true) {
         print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board

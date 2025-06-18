@@ -52,12 +52,12 @@ void test_move_generation(std::string FEN_position, std::string FEN_moves_expect
     if (same_elements_sorted(tokens_expected, tokens_generated)) {
         std::cout << "\033[32mO\033[0m Test succeeded for: '" << FEN_position << "' " << std::endl;
         // std::cout << "Generated moves: " << fen_moves << std::endl;
-        // print_board(figuresB, figuresR, guardB, guardR); // Print the board
+        // print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     } else {
         std::cout << "\033[31mX\033[0m Test failed for: '" << FEN_position << "' " << std::endl;
         std::cout << "Expected moves: " << FEN_moves_expected << std::endl;
         std::cout << "Generated moves: " << fen_moves << std::endl;
-        print_board(figuresB, figuresR, guardB, guardR); // Print the board
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     }
 }
 

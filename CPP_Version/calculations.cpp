@@ -154,7 +154,7 @@ void move(MoveStack stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], 
 }
 
 // TODO in caller function: while (startpos)
-inline void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
+void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
     from = 1ULL << __builtin_ctzll(startpos) ; 
     to = 1ULL << __builtin_ctzll(endpos) | MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
     startpos &= startpos - 1; // Clear the lowest set bit
@@ -207,74 +207,74 @@ uint64_t hit_moves(uint64_t (&figuresE)[7], uint64_t (&figuresP)[7], uint64_t gu
 }
 
 
-// Eval without useage of enemy use hits
-int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
-    int score = 0;
-    // Tweek these
-    // Figuere Difference
-    int figure_diff = 0;
-    int stack_height_B_0 = __builtin_popcountll(figuresB[0]);
-    figure_diff += stack_height_B_0; 
-    int stack_height_B_1 = __builtin_popcountll(figuresB[1]);
-    figure_diff += stack_height_B_1; 
-    int stack_height_B_2 = __builtin_popcountll(figuresB[2]);
-    figure_diff += stack_height_B_2; 
-    int stack_height_B_3 = __builtin_popcountll(figuresB[3]);
-    figure_diff += stack_height_B_3; 
-    int stack_height_B_4 = __builtin_popcountll(figuresB[4]);
-    figure_diff += stack_height_B_4; 
-    int stack_height_B_5 = __builtin_popcountll(figuresB[5]);
-    figure_diff += stack_height_B_5; 
-    int stack_height_B_6 = __builtin_popcountll(figuresB[6]);
-    figure_diff += stack_height_B_6; 
+// // Eval without useage of enemy use hits
+// int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
+//     int score = 0;
+//     // Tweek these
+//     // Figuere Difference
+//     int figure_diff = 0;
+//     int stack_height_B_0 = __builtin_popcountll(figuresB[0]);
+//     figure_diff += stack_height_B_0; 
+//     int stack_height_B_1 = __builtin_popcountll(figuresB[1]);
+//     figure_diff += stack_height_B_1; 
+//     int stack_height_B_2 = __builtin_popcountll(figuresB[2]);
+//     figure_diff += stack_height_B_2; 
+//     int stack_height_B_3 = __builtin_popcountll(figuresB[3]);
+//     figure_diff += stack_height_B_3; 
+//     int stack_height_B_4 = __builtin_popcountll(figuresB[4]);
+//     figure_diff += stack_height_B_4; 
+//     int stack_height_B_5 = __builtin_popcountll(figuresB[5]);
+//     figure_diff += stack_height_B_5; 
+//     int stack_height_B_6 = __builtin_popcountll(figuresB[6]);
+//     figure_diff += stack_height_B_6; 
 
-    int stack_height_R_0 = - __builtin_popcountll(figuresR[6]);
-    figure_diff += stack_height_R_0;
-    int stack_height_R_1 = - __builtin_popcountll(figuresR[0]);
-    figure_diff += stack_height_R_1;
-    int stack_height_R_2 = - __builtin_popcountll(figuresR[1]);
-    figure_diff += stack_height_R_2;
-    int stack_height_R_3 = - __builtin_popcountll(figuresR[2]);
-    figure_diff += stack_height_R_3;
-    int stack_height_R_4 = - __builtin_popcountll(figuresR[3]);
-    figure_diff += stack_height_R_4;
-    int stack_height_R_5 = - __builtin_popcountll(figuresR[4]);
-    figure_diff += stack_height_R_5;
-    int stack_height_R_6 = - __builtin_popcountll(figuresR[5]);
-    figure_diff += stack_height_R_6;
+//     int stack_height_R_0 = - __builtin_popcountll(figuresR[6]);
+//     figure_diff += stack_height_R_0;
+//     int stack_height_R_1 = - __builtin_popcountll(figuresR[0]);
+//     figure_diff += stack_height_R_1;
+//     int stack_height_R_2 = - __builtin_popcountll(figuresR[1]);
+//     figure_diff += stack_height_R_2;
+//     int stack_height_R_3 = - __builtin_popcountll(figuresR[2]);
+//     figure_diff += stack_height_R_3;
+//     int stack_height_R_4 = - __builtin_popcountll(figuresR[3]);
+//     figure_diff += stack_height_R_4;
+//     int stack_height_R_5 = - __builtin_popcountll(figuresR[4]);
+//     figure_diff += stack_height_R_5;
+//     int stack_height_R_6 = - __builtin_popcountll(figuresR[5]);
+//     figure_diff += stack_height_R_6;
 
     
-    score += 200 * figure_diff; // TODO: Tweek this value
+//     score += 200 * figure_diff; // TODO: Tweek this value
 
-    // Stack Height Values
-    score -= 10 * (stack_height_B_0-stack_height_R_0); 
-    score += 20 * (stack_height_B_1-stack_height_R_1);
-    score += 10 * (stack_height_B_2-stack_height_R_2);
-    score += 40 * (stack_height_B_3-stack_height_R_3);
+//     // Stack Height Values
+//     score -= 10 * (stack_height_B_0-stack_height_R_0); 
+//     score += 20 * (stack_height_B_1-stack_height_R_1);
+//     score += 10 * (stack_height_B_2-stack_height_R_2);
+//     score += 40 * (stack_height_B_3-stack_height_R_3);
 
-    // higher stacks already penalized by having fewer lower stacks
+//     // higher stacks already penalized by having fewer lower stacks
 
   
 
-    // positional values
-    score -= 10 *(stack_height_B_1 & ROW_1);
-    // score += c *(stack_height_B_1 & ROW_2);
-    score += 40 *(stack_height_B_1 & ROW_3);
-    score += 10 *(stack_height_B_1 & ROW_4);
-    score += 80 *(stack_height_B_1 & ROW_5);
-    score += 30 *(stack_height_B_1 & ROW_6);
-    score += 10 *(stack_height_B_1 & ROW_7);
+//     // positional values
+//     score -= 10 *(stack_height_B_1 & ROW_1);
+//     // score += c *(stack_height_B_1 & ROW_2);
+//     score += 40 *(stack_height_B_1 & ROW_3);
+//     score += 10 *(stack_height_B_1 & ROW_4);
+//     score += 80 *(stack_height_B_1 & ROW_5);
+//     score += 30 *(stack_height_B_1 & ROW_6);
+//     score += 10 *(stack_height_B_1 & ROW_7);
 
-    score -= 10 *(stack_height_B_2 & COL_A);
-    score += 30 *(stack_height_B_2 & COL_B);
-    // score += 10 *(stack_height_B_2 & COL_C);
-    score += 40 *(stack_height_B_2 & COL_D);
-    // score += 10 *(stack_height_B_2 & COL_E);
-    score += 30 *(stack_height_B_2 & COL_F);
-    score -= 10 *(stack_height_B_2 & COL_G);
+//     score -= 10 *(stack_height_B_2 & COL_A);
+//     score += 30 *(stack_height_B_2 & COL_B);
+//     // score += 10 *(stack_height_B_2 & COL_C);
+//     score += 40 *(stack_height_B_2 & COL_D);
+//     // score += 10 *(stack_height_B_2 & COL_E);
+//     score += 30 *(stack_height_B_2 & COL_F);
+//     score -= 10 *(stack_height_B_2 & COL_G);
 
-    return score;
-}
+//     return score;
+// }
 
 
 

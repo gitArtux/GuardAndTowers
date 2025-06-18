@@ -11,5 +11,5 @@ void set_board(std::string fen_pos, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_
 
 inline std::string FEN_position(std::uint64_t pos);
 std::string extract_FEN_Moves(uint64_t (&moves)[24][2]);
-void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR);
+void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn);
 void print_Bitboard(std::uint64_t bitboard);
