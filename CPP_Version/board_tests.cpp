@@ -41,7 +41,7 @@ void test_move_generation(std::string FEN_position, std::string FEN_moves_expect
         Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
         fen_moves = extract_FEN_Moves(moves); // Extract the FEN moves
     } else {
-        Moves moves = move_generation(figuresR, figuresB, figuresB_2d, guardR, guardB);
+        Moves moves = move_generation(figuresR, figuresB, figuresR_2d, guardR, guardB);
         fen_moves = extract_FEN_Moves(moves); // Extract the FEN moves
     }
 
@@ -51,13 +51,19 @@ void test_move_generation(std::string FEN_position, std::string FEN_moves_expect
 
     if (same_elements_sorted(tokens_expected, tokens_generated)) {
         std::cout << "\033[32mO\033[0m Test succeeded for: '" << FEN_position << "' " << std::endl;
-        // std::cout << "Generated moves: " << fen_moves << std::endl;
-        // print_board(figuresB, figuresR, guardB, guardR); // Print the board
+        std::cout << "Expected moves: " << FEN_moves_expected << std::endl;
+        std::cout << "Generated moves: " << fen_moves << std::endl;
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     } else {
         std::cout << "\033[31mX\033[0m Test failed for: '" << FEN_position << "' " << std::endl;
         std::cout << "Expected moves: " << FEN_moves_expected << std::endl;
         std::cout << "Generated moves: " << fen_moves << std::endl;
+        // std::cout << "Figures B: " << std::endl;
+        // print_Bitboard(figuresB[0]);
+        // std::cout << "Figures R: " << std::endl;
+        // print_Bitboard(figuresR[0]);
         print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+
     }
 }
 

@@ -127,6 +127,28 @@ std::string extract_FEN_Moves(Moves moves) {
     }
     return result;
 }
+
+void print_board2d_blue(uint8_t (&figuresB_2d)[49]) {
+    for (int i = 0; i < 7; ++i) {
+        for (int j = 0; j < 7; ++j) {
+            std::cout << std::to_string(figuresB_2d[i * 7 + j]) << " "; // Print the Blue figures
+        }
+        std::cout << "\n";
+    }
+}
+
+void print_board2d_red(uint8_t (&figuresR_2d)[49]) {
+    
+    for (int i = 0; i < 7; ++i) {
+        for (int j = 0; j < 7; ++j) {
+            std::cout << std::to_string(figuresR_2d[i * 7 + j]) << " "; // Print the Blue figures
+        }
+        std::cout << "\n";
+    }
+}
+
+
+ 
   
 void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn) {
     // Empty==0, Blue>0, Red<0
