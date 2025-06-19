@@ -7,7 +7,7 @@
 using Moves = std::vector<std::array<uint64_t,2>>;
 using MoveStack = std::vector<Moves>;
 using MoveHistory = std::vector<std::array<uint64_t, 2>>; // Define MoveHistory as a vector of arrays of two uint64_t values
-
+using Move = std::array<uint64_t, 2>;
 
 // struct Moves {
 //     uint64_t data[64];
