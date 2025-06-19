@@ -11,10 +11,10 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../CPP_Version")))
 
-import libboard
+# import libboard
 
-cpp_result = libboard.say_hello("Ben")
-print(cpp_result)
+# cpp_result = libboard.say_hello("Ben")
+# print(cpp_result)
 
 SQUARE = 80
 LIGHT = "#F0D9B5"

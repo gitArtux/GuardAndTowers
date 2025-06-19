@@ -1,82 +1,104 @@
-// Inports
 #include <cstdint>
-#include "const.h"
 
-// Exports
-#include "calculations.h"
+#include <vector>
 
+
+#include "const.hpp"
+#include "calculations.hpp"
 
 using namespace masks;
 
-// works for both players, just switch R and B arguments
-void move_generation(uint64_t (&moves)[24][2], uint64_t(&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
-    int adress_count = 0; // Reset adress count for the new generation
-    //uint64_t enemy_moves = 0;
+
+
+
+Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint64_t guardB, uint64_t guardR) {
+    Moves moves;
+    moves.reserve(32);
     
-    // Iterate over 6 possible move sizes
-    #pragma GCC unroll 6
-    for (int s = 0; s < 6; ++s) {   
-        // load into registers for faster access
-        // load into registers for faster access
-        uint64_t figsB = figuresB[s];
-        uint64_t clear_mask_B = ~(figuresR[s+1] | guardB);
-        uint64_t shift_0 = SHIFTS[0][s];
-        uint64_t shift_1 = SHIFTS[1][s];
-        uint64_t mask_type = MASK_TYPE[s];
+    const uint64_t blocks = figuresB[0] | figuresR[0] | guardB | guardR;
 
-        // calculte the end positions
-        uint64_t endpos_1 = (figsB & MASK_LEFT_MOVES[0][s]) << shift_0 & clear_mask_B; // LEFT SHIFTS
-        uint64_t endpos_2 = (figsB & MASK_LEFT_MOVES[1][s]) << shift_1 & clear_mask_B; // LEFT SHIFTS
-        uint64_t endpos_3 = (figsB & MASK_RIGHT_MOVES[0][s]) >> shift_0 & clear_mask_B; // RIGHT SHIFTS
-        uint64_t endpos_4 = (figsB & MASK_RIGHT_MOVES[1][s]) >> shift_1 & clear_mask_B; // RIGHT SHIFTS
+    uint64_t figs = figuresB[0];
 
-        moves[adress_count][0] = endpos_1 >> shift_0; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
-        moves[adress_count++][1] = endpos_1 | mask_type; // set the stack height of the moving part of the figure
-        moves[adress_count][0] = endpos_2 >> shift_1; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
-        moves[adress_count++][1] = endpos_2 | mask_type; // set the stack height of the moving part of the figure
-        moves[adress_count][0] = endpos_3 << shift_0; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
-        moves[adress_count++][1] = endpos_3 | mask_type; // set the stack height of the moving part of the figure
-        moves[adress_count][0] = endpos_4 << shift_1; // store the moves of the dimension in the moves array; notice if no mossives were possible startpos is 0
-        moves[adress_count++][1] = endpos_4 | mask_type; // set the stack height of the moving part of the figure
+    while (figs){
+        int index = __builtin_ctzll(figs); // Get the position of the lowest set bit
+        uint64_t fig = 1ULL << index; // Get the figure
+        int height = figuresB_2d[index]; // Get the height of the figure
+
+        uint64_t blocked_1 = ONES;
+        uint64_t blocked_2 = ONES;
+        uint64_t blocked_3 = ONES;
+        uint64_t blocked_4 = ONES;
+        uint64_t dests = 0;
+
+        for(int h=0; h<height; ++h){
+            uint64_t clear_mask_B = ~(figuresR[h+1] | guardB);
+            uint64_t shift_0 = SHIFTS[0][h];
+            uint64_t shift_1 = SHIFTS[1][h];
+
+            // calculte the end positions
+            uint64_t endpos_1 = (fig & MASK_LEFT_MOVES[0][h])  << shift_0 & blocked_1;
+            uint64_t endpos_2 = (fig & MASK_LEFT_MOVES[1][h])  << shift_1 & blocked_2;
+            uint64_t endpos_3 = (fig & MASK_RIGHT_MOVES[0][h]) >> shift_0 & blocked_3; 
+            uint64_t endpos_4 = (fig & MASK_RIGHT_MOVES[1][h]) >> shift_1 & blocked_4;
+
+            blocked_1 &= -static_cast<uint64_t>((endpos_1 & blocks) == 0);
+            blocked_2 &= -static_cast<uint64_t>((endpos_2 & blocks) == 0);
+            blocked_3 &= -static_cast<uint64_t>((endpos_3 & blocks) == 0);
+            blocked_4 &= -static_cast<uint64_t>((endpos_4 & blocks) == 0);
+
+            endpos_1 &= clear_mask_B;
+            endpos_2 &= clear_mask_B;
+            endpos_3 &= clear_mask_B;
+            endpos_4 &= clear_mask_B;
+
+            uint64_t mask_type = MASK_TYPE[h];
+            if (endpos_1) moves.emplace_back(std::array<uint64_t, 2>{fig, endpos_1 | mask_type});
+            if (endpos_2) moves.emplace_back(std::array<uint64_t, 2>{fig, endpos_2 | mask_type});
+            if (endpos_3) moves.emplace_back(std::array<uint64_t, 2>{fig, endpos_3 | mask_type});
+            if (endpos_4) moves.emplace_back(std::array<uint64_t, 2>{fig, endpos_4 | mask_type});
+        }
+        figs &= figs - 1; // Clear the lowest set bit
     }
 
-    uint64_t shift_0 = SHIFTS[0][0];
-    uint64_t shift_1 = SHIFTS[1][0];
-    uint64_t mask_type = MASK_TYPE[0];
+    uint64_t shift_0  = SHIFTS[0][0];
+    uint64_t shift_1  = SHIFTS[1][0];
     uint64_t not_figB = ~figuresB[0];
-
+    uint64_t dests = 0;
     uint64_t endpos_1 = (guardB & MASK_LEFT_MOVES[0][0])  << shift_0 & not_figB;
     uint64_t endpos_2 = (guardB & MASK_LEFT_MOVES[1][0])  << shift_1 & not_figB;
     uint64_t endpos_3 = (guardB & MASK_RIGHT_MOVES[0][0]) >> shift_0 & not_figB;
     uint64_t endpos_4 = (guardB & MASK_RIGHT_MOVES[1][0]) >> shift_1 & not_figB;
-    
-    moves[0][0] |= endpos_1 >> shift_0;
-    moves[0][1] |= endpos_1 | mask_type;
-    moves[1][0] |= endpos_2 >> shift_1;
-    moves[1][1] |= endpos_2 | mask_type;
-    moves[2][0] |= endpos_3 << shift_0;
-    moves[2][1] |= endpos_3 | mask_type;
-    moves[3][0] |= endpos_4 << shift_1;
-    moves[3][1] |= endpos_4 | mask_type;
-}       
+
+    if (endpos_1) moves.emplace_back(std::array<uint64_t, 2>{guardB, endpos_1 | MASK_1});
+    if (endpos_2) moves.emplace_back(std::array<uint64_t, 2>{guardB, endpos_2 | MASK_1});
+    if (endpos_3) moves.emplace_back(std::array<uint64_t, 2>{guardB, endpos_3 | MASK_1});
+    if (endpos_4) moves.emplace_back(std::array<uint64_t, 2>{guardB, endpos_4 | MASK_1});
+
+    return moves;
+}
+
+
 
 // works for both players, just switch R and B arguments
-bool move(uint64_t from, uint64_t to, uint64_t* __restrict figuresB, uint64_t* __restrict figuresR, uint8_t* __restrict figuresB_2d, uint8_t* figuresR_2d, uint64_t &guardB, uint64_t guardR) {
+bool move(MoveHistory stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
+    if (to & guardR || to & guardB & home) {
+        return true;
+    }
     if (__builtin_expect(guardB & from,0)) {
         // Guard Move
-        guardB ^= (guardB ^ to) & -(from & guardB == 0); // x ^= (x ^ newval) & -cond; 
+        guardB = to;
     } else {
 
         uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
         uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
         uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
 
-        for (int l = 1; l <= leaving_height; ++l) {
+        for (int l = 0; l < leaving_height; ++l) {
             // Remove the positions from the origin position
             figuresB[origin_height - l] ^= from; 
 
-            // Add the positions to the destination position	
-            figuresB[target_height + l] |= to;
+            // !! Meta data gets written aswell but doesnt matter	
+            figuresB[target_height + l + 1] |= to;
         }
         figuresB_2d[__builtin_ctzll(from)] -= leaving_height;
         figuresB_2d[__builtin_ctzll(to)] += leaving_height;
@@ -90,19 +112,49 @@ bool move(uint64_t from, uint64_t to, uint64_t* __restrict figuresB, uint64_t* _
         figuresR[4] ^= ~(to & -(to & figuresR[4] == 0));  
         figuresR[5] ^= ~(to & -(to & figuresR[5] == 0));  
         figuresR[6] ^= ~(to & -(to & figuresR[6] == 0));  
-        figuresR_2d[__builtin_ctzll(to)] = 0; // Remove the height from the origin position
+        int index = __builtin_ctzll(to); 
+        to |= static_cast<uint64_t>(figuresR_2d[index]) << CAPTURE_INDEX; // Remove the height from the origin position
+        figuresR_2d[index] = 0; // Remove the height from the origin position
     }
-    // check winconditions --> true if won
-    return (from & guardB && to & HOMESQUARE_R) || (to & guardR);
+
+    stack.emplace_back(std::array<uint64_t, 2>{from, to});
+    return false; 
 }
 
-// TODO in caller function: while (startpos)
-void extract_move(uint64_t &to, uint64_t &from, uint64_t &startpos, uint64_t &endpos) {
-    from = 1ULL << __builtin_ctzll(startpos) ; 
-    to = 1ULL << __builtin_ctzll(endpos) | MASK_STACKHEIGHT & endpos; // Add stack height of moving part of the figure  
-    startpos &= startpos - 1; // Clear the lowest set bit
-    endpos &= endpos - 1; // Clear the lowest set bit
+void undo(MoveHistory stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+    uint64_t from = stack.back()[0];
+    uint64_t to   = stack.back()[1];
+    stack.pop_back();
+
+
+    if (__builtin_expect(guardB & to,0)) {
+        // Guard Move
+        guardB = to; // x ^= (x ^ newval) & -cond;
+        return;
+    }
+    
+    uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
+    uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
+    uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
+    uint8_t captured_height = (to & CAPTURE_MASK) >> CAPTURE_INDEX; // Remove the height from the origin position
+
+    for (int l = 0; l < leaving_height; ++l) {
+        // !! Meta data gets written aswell but doesnt matter	
+        figuresB[target_height - l] ^= to; 
+
+        // Add the positions to the destination position	
+        figuresB[origin_height + l + 1] |= from;
+    }
+    figuresB_2d[__builtin_ctzll(from)] += leaving_height;
+    figuresB_2d[__builtin_ctzll(to)] -= leaving_height;
+
+    if (__builtin_expect(captured_height,0)) {
+        for (int l = 0; l < captured_height; ++l) {
+            // !! Meta data gets written aswell but doesnt matter	
+            figuresR[l] ^= to;  
+        }
+        figuresR_2d[__builtin_ctzll(to)] = captured_height; // Remove the height from the origin position
+    }
+
 }
-
-
 
