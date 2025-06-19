@@ -36,15 +36,20 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
             uint64_t shift_1 = SHIFTS[1][h];
 
             // calculte the end positions
-            uint64_t endpos_1 = (fig & MASK_LEFT_MOVES[0][h])  << shift_0 & (blocked_1 & clear_mask_B);
-            uint64_t endpos_2 = (fig & MASK_LEFT_MOVES[1][h])  << shift_1 & (blocked_2 & clear_mask_B);
-            uint64_t endpos_3 = (fig & MASK_RIGHT_MOVES[0][h]) >> shift_0 & (blocked_3 & clear_mask_B); 
-            uint64_t endpos_4 = (fig & MASK_RIGHT_MOVES[1][h]) >> shift_1 & (blocked_4 & clear_mask_B);
+            uint64_t endpos_1 = (fig & MASK_LEFT_MOVES[0][h])  << shift_0 & blocked_1;
+            uint64_t endpos_2 = (fig & MASK_LEFT_MOVES[1][h])  << shift_1 & blocked_2;
+            uint64_t endpos_3 = (fig & MASK_RIGHT_MOVES[0][h]) >> shift_0 & blocked_3; 
+            uint64_t endpos_4 = (fig & MASK_RIGHT_MOVES[1][h]) >> shift_1 & blocked_4;
 
             blocked_1 &= -static_cast<uint64_t>((endpos_1 & blocks) == 0);
             blocked_2 &= -static_cast<uint64_t>((endpos_2 & blocks) == 0);
             blocked_3 &= -static_cast<uint64_t>((endpos_3 & blocks) == 0);
             blocked_4 &= -static_cast<uint64_t>((endpos_4 & blocks) == 0);
+
+            endpos_1 &= clear_mask_B;
+            endpos_2 &= clear_mask_B;
+            endpos_3 &= clear_mask_B;
+            endpos_4 &= clear_mask_B;
 
             uint64_t mask_type = MASK_TYPE[h];
             if (endpos_1) moves.emplace_back(std::array<uint64_t, 2>{fig, endpos_1 | mask_type});
@@ -76,7 +81,10 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
 
 
 // works for both players, just switch R and B arguments
-void move(Move_History_Stack stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+bool move(MoveHistory stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
+    if (to & guardR || to & guardB & home) {
+        return true;
+    }
     if (__builtin_expect(guardB & from,0)) {
         // Guard Move
         guardB = to;
@@ -110,6 +118,42 @@ void move(Move_History_Stack stack, uint64_t from, uint64_t to, uint64_t (&figur
         figuresR_2d[index] = 0; // Remove the height from the origin position
     }
 
-    stack.push(from);
-    stack.push(to); 
+    stack.emplace_back(std::array<uint64_t, 2>{from, to});
+    return false; 
+}
+
+void undo(MoveHistory stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+    uint64_t from = stack.back()[0];
+    uint64_t to   = stack.back()[1];
+
+
+    if (__builtin_expect(guardB & to,0)) {
+        // Guard Move
+        guardB = to; // x ^= (x ^ newval) & -cond;
+        return;
+    }
+    
+    uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
+    uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
+    uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
+    uint8_t captured_height = (to & CAPTURE_MASK) >> CAPTURE_INDEX; // Remove the height from the origin position
+
+    for (int l = 0; l < leaving_height; ++l) {
+        // !! Meta data gets written aswell but doesnt matter	
+        figuresB[target_height - l] ^= to; 
+
+        // Add the positions to the destination position	
+        figuresB[origin_height + l + 1] |= from;
+    }
+    figuresB_2d[__builtin_ctzll(from)] += leaving_height;
+    figuresB_2d[__builtin_ctzll(to)] -= leaving_height;
+
+    if (__builtin_expect(captured_height,0)) {
+        for (int l = 0; l < captured_height; ++l) {
+            // !! Meta data gets written aswell but doesnt matter	
+            figuresR[l] ^= to;  
+        }
+        figuresR_2d[__builtin_ctzll(to)] = captured_height; // Remove the height from the origin position
+    }
+
 }
