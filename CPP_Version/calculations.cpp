@@ -28,7 +28,6 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
         uint64_t blocked_2 = ONES;
         uint64_t blocked_3 = ONES;
         uint64_t blocked_4 = ONES;
-        uint64_t dests = 0;
 
         for(int h=0; h<height; ++h){
             uint64_t clear_mask_B = ~(figuresR[h+1] | guardB);
@@ -80,7 +79,7 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
 
 
 // works for both players, just switch R and B arguments
-bool move(MoveHistory stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
+bool move(MoveHistory &stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
     if (to & guardR || to & guardB & home) {
         return true;
     }
@@ -121,7 +120,7 @@ bool move(MoveHistory stack, uint64_t from, uint64_t to, uint64_t (&figuresB)[7]
     return false; 
 }
 
-void undo(MoveHistory stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+void undo(MoveHistory &stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
     uint64_t from = stack.back()[0];
     uint64_t to   = stack.back()[1];
     stack.pop_back();
