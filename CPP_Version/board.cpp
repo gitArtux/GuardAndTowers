@@ -3,6 +3,7 @@
 #include <bitset>
 #include <string>
 
+
 #include <cstring> // For memset
 #include <iostream>
 
@@ -148,9 +149,27 @@ void print_board2d_red(uint8_t (&figuresR_2d)[49]) {
 }
 
 
- 
+ void debug(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn) {
+    std::cout << "Is Blue Turn: " << (isBlueTurn ? "True" : "False") << std::endl; // Print the turn
+
+    std::cout << "Guard B: " << std::bitset<64>(guardB) << std::endl; // Print the guardB in binary format
+    std::cout << "Guard R: " << std::bitset<64>(guardR) << std::endl; // Print the guardR in binary format
+
+    std::cout << "Figures R: " << std::bitset<64>(figuresR[0]) << std::endl; // Print the figuresR in binary format
+    for (int i = 0; i < 7; ++i) {
+            std::cout << "Figures B[" << i << "]: " << std::endl;
+            print_Bitboard(figuresB[i]);
+        }
+    for (int i = 0; i < 7; ++i) {
+        std::cout << "Figures R[" << i << "]: " << std::endl;
+        print_Bitboard(figuresR[i]);
+    }
+
+}
   
 void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn) {
+    // debug(figuresB, figuresR, guardB, guardR, isBlueTurn); // Debug information
+    
     // Empty==0, Blue>0, Red<0
     std::string board[7][7];
     for (int i = 0; i < 7; ++i) {
@@ -228,6 +247,8 @@ inline int check_won(uint64_t guardB, uint64_t guardR, uint64_t figuresB, uint64
     return guardB & homesquare || guardR & (figuresB | guardB); 
 }   
 
+
+        
 
 // // UNFINISHED 
 // void play(MoveStack stack, uint64_t (&moves)[MAX_DEPTH][24][2], uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth, bool playerblue) {

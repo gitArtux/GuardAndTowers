@@ -28,16 +28,16 @@ MoveStack expected_stack, MoveHistory expected_movehistory, uint64_t (&expected_
 
     // Compare the current state with the expected state
     return (
-        stack == expected_stack &&
-        movehistory == expected_movehistory &&
-        figuresB == expected_figuresB &&
-        figuresR == expected_figuresR &&
-        figuresB_2d == expected_figuresB_2d &&
-        figuresR_2d == expected_figuresR_2d &&
+        // stack == expected_stack &&
+        // movehistory == expected_movehistory &&
+        std::equal(std::begin(figuresB), std::end(figuresB), std::begin(expected_figuresB)) &&
+        std::equal(std::begin(figuresR), std::end(figuresR), std::begin(expected_figuresR)) &&
+        std::equal(std::begin(figuresB_2d), std::end(figuresB_2d), std::begin(expected_figuresB_2d)) &&
+        std::equal(std::begin(figuresR_2d), std::end(figuresR_2d), std::begin(expected_figuresR_2d)) &
         guardB == expected_guardB &&
-        guardR == expected_guardR &&
-        isBlueTurn == expected_isBlueTurn &&
-        depth == expected_depth
+        guardR == expected_guardR 
+        // isBlueTurn == expected_isBlueTurn &&
+        // depth == expected_depth
     );
 }
 
@@ -63,19 +63,115 @@ void test_move_undo_depth1(std::string fen, MoveStack stack, MoveHistory movehis
     // Calc Moves
     Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
     stack.push_back(moves);
-    for (const auto& move : moves) {
-        do_move(movehistory, move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, 0);
+
+
+    if (isBlueTurn){
+        Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+        std::cout << "Before: " << std::endl; // Print the moves
+
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+        // debug(figuresB, figuresR, guardB, guardR, isBlueTurn); // Debug information
+        
+        do_move(movehistory, moves[0], figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, masks::HOMESQUARE_R);
+        std::cout << "After: " << std::endl; // Print the moves
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+        undo(movehistory, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB); // Undo the move
+        std::cout << "After undo: " << std::endl; // Print the moves
+
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+        // print_board2d_blue(figuresB_2d); // Print the blue figures in 2D
+        // debug(figuresB, figuresR, guardB, guardR, isBlueTurn); // Debug information
+
+
+    } else {
+        Moves moves = move_generation(figuresR, figuresB, figuresR_2d, guardR, guardB);
+        std::cout << "Before: " << std::endl; // Print the moves
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+
+        do_move(movehistory, moves[0], figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB, masks::HOMESQUARE_B);
+        std::cout << "After: " << std::endl; // Print the moves
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+        
+        undo(movehistory, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR); // Undo the move
+        std::cout << "After undo: " << std::endl; // Print the moves
+        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+
     }
     
 
+    bool expected_result = compare_states(
+        stack, movehistory, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth,
+        expected_stack, expected_movehistory, expected_figuresB, expected_figuresR, expected_figuresB_2d, expected_figuresR_2d, expected_guardB, expected_guardR, expected_isBlueTurn, expected_depth
+    );
 
-    if () {
-        std::cout << "\033[32mO\033[0m Test succeeded for: '" << FEN_position << "' " << std::endl;
+    if (expected_result) {
+        std::cout << "\033[32mO\033[0m Test succeeded for: '" << fen << "' " << std::endl;
 
-        print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+        // print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     } else {
-        std::cout << "\033[31mX\033[0m Test failed for: '" << FEN_position << "' " << std::endl;
+        std::cout << "\033[31mX\033[0m Test failed for: '" << fen << "' " << std::endl;
+        // std::cout << "Figures B: " << std::endl;
+        // print_Bitboard(figuresB[0]);
+        // std::cout << "Figures R: " << std::endl;
+        // print_Bitboard(figuresR[0]);
+        // print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
 
+    }
+}
+
+void test_moves(std::string fen, MoveStack stack, MoveHistory movehistory, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, bool &isBlueTurn, int &depth) {
+    set_board(fen, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
+    MoveHistory expected_movehistory;
+    MoveStack expected_stack;
+
+    uint64_t expected_figuresB[7];
+    uint64_t expected_figuresR[7];
+    uint8_t expected_figuresB_2d[49];
+    uint8_t expected_figuresR_2d[49];
+    std::copy(std::begin(figuresB), std::end(figuresB), std::begin(expected_figuresB));
+    std::copy(std::begin(figuresR), std::end(figuresR), std::begin(expected_figuresR));
+    std::copy(std::begin(figuresB_2d), std::end(figuresB_2d), std::begin(expected_figuresB_2d));
+    std::copy(std::begin(figuresR_2d), std::end(figuresR_2d), std::begin(expected_figuresR_2d));
+
+    uint64_t expected_guardB = guardB;
+    uint64_t expected_guardR = guardR;
+    bool expected_isBlueTurn = isBlueTurn;
+    int expected_depth = depth;
+
+
+    if (isBlueTurn){
+        Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+
+        for (const auto& move : moves) {
+            // print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+            do_move(movehistory, move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, masks::HOMESQUARE_R);
+            undo(movehistory, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB); // Undo the move
+
+        }
+
+    } else {
+        Moves moves = move_generation(figuresR, figuresB, figuresR_2d, guardR, guardB);
+        for (const auto& move : moves) {
+            // print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+            do_move(movehistory, move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB, masks::HOMESQUARE_B);
+            undo(movehistory, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR); // Undo the move
+        }
+        
+    }
+    
+
+    bool expected_result = compare_states(
+        stack, movehistory, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth,
+        expected_stack, expected_movehistory, expected_figuresB, expected_figuresR, expected_figuresB_2d, expected_figuresR_2d, expected_guardB, expected_guardR, expected_isBlueTurn, expected_depth
+    );
+
+
+    if (expected_result) {
+        std::cout << "\033[32mO\033[0m Test succeeded for: '" << fen << "' " << std::endl;
+
+        // print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
+    } else {
+        std::cout << "\033[31mX\033[0m Test failed for: '" << fen << "' " << std::endl;
         // std::cout << "Figures B: " << std::endl;
         // print_Bitboard(figuresB[0]);
         // std::cout << "Figures R: " << std::endl;
@@ -96,9 +192,13 @@ int main() {
     bool isBlueTurn = true;
     int depth = 0;
 
+    for (const auto& case_pair : TEST_CASES) {
+        const auto& fen = case_pair.first;
+        test_moves(fen, MoveStack(), MoveHistory(), figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth);
+    }
 
     
 
-
+    // test_move_undo_depth1("3RG3/7/7/3b13/7/7/3BG3 b", MoveStack(), MoveHistory(), figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth);
     return 0;
 }

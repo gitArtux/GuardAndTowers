@@ -19,4 +19,4 @@ void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guar
 void print_Bitboard(std::uint64_t bitboard);
 void print_board2d_red(uint8_t (&figuresR_2d)[49]);
 void print_board2d_blue(uint8_t (&figuresB_2d)[49]);
-
+void debug(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn);

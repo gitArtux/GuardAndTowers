@@ -82,6 +82,11 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
 bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
     uint64_t from = move[0];
     uint64_t to   = move[1];
+    stack.emplace_back(std::array<uint64_t, 2>{from, to});
+
+    uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
+    to &= FILTER_FIG; // Remove the type from the destination position
+
     if (to & guardR || to & guardB & home) {
         return true;
     }
@@ -90,16 +95,16 @@ bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&
         guardB = to;
     } else {
 
-        uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
+        
         uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
         uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
-
         for (int l = 0; l < leaving_height; ++l) {
+            
             // Remove the positions from the origin position
-            figuresB[origin_height - l] ^= from; 
+            figuresB[origin_height - l - 1] ^= from; 
 
             // !! Meta data gets written aswell but doesnt matter	
-            figuresB[target_height + l + 1] |= to;
+            figuresB[target_height + l] |= to;
         }
         figuresB_2d[__builtin_ctzll(from)] -= leaving_height;
         figuresB_2d[__builtin_ctzll(to)] += leaving_height;
@@ -118,35 +123,38 @@ bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&
         figuresR_2d[index] = 0; // Remove the height from the origin position
     }
 
-    stack.emplace_back(std::array<uint64_t, 2>{from, to});
     return false; 
 }
 
 void undo(MoveHistory &stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
     uint64_t from = stack.back()[0];
-    uint64_t to   = stack.back()[1];
+    uint64_t to   = stack.back()[1]; // Remove the type from the destination position
     stack.pop_back();
-
-    if (__builtin_expect(guardB & to,0)) {
-        // Guard Move
-        guardB = to; // x ^= (x ^ newval) & -cond;
-        return;
-    }
-    
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
-    uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
-    uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
+    to &= FILTER_FIG; // Remove the type from the destination position
     uint8_t captured_height = (to & CAPTURE_MASK) >> CAPTURE_INDEX; // Remove the height from the origin position
 
-    for (int l = 0; l < leaving_height; ++l) {
-        // !! Meta data gets written aswell but doesnt matter	
-        figuresB[target_height - l] ^= to; 
 
-        // Add the positions to the destination position	
-        figuresB[origin_height + l + 1] |= from;
+    if (guardB & to) {
+        // Guard Move
+        guardB = from; // x ^= (x ^ newval) & -cond;
+        
+    } else {
+    
+        
+        uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
+        uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
+
+        for (int l = 0; l < leaving_height; ++l) {
+            // !! Meta data gets written aswell but doesnt matter	
+            figuresB[target_height - l - 1] ^= to; 
+
+            // Add the positions to the destination position	
+            figuresB[origin_height + l] |= from;
+        }
+        figuresB_2d[__builtin_ctzll(from)] += leaving_height;
+        figuresB_2d[__builtin_ctzll(to)] -= leaving_height;
     }
-    figuresB_2d[__builtin_ctzll(from)] += leaving_height;
-    figuresB_2d[__builtin_ctzll(to)] -= leaving_height;
 
     if (__builtin_expect(captured_height,0)) {
         for (int l = 0; l < captured_height; ++l) {
