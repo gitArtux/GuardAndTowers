@@ -3,6 +3,7 @@
 
 // CONFIGURATION ---------------------------------------------------------------------------------------------------
 constexpr int MAX_DEPTH = 8; // Maximum depth for the move generation
+constexpr int OFFSET = 30; // Offset for the alpha-beta pruning
 //------------------------------------------------------------------------------------------------------------------
 
 

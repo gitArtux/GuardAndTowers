@@ -1,14 +1,5 @@
 #pragma once
-#include <cstdint>
-#include "const.hpp"
-#include <vector>
-#include <array>
-
-using Move = std::array<uint64_t, 2>;
-using Moves = std::vector<Move>;
-using MoveStack = std::vector<Moves>;
-using MoveHistory = std::vector<Move>; // Define MoveHistory as a vector of arrays of two uint64_t values
-
+#include "types.hpp"
 
 
 

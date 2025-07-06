@@ -105,7 +105,7 @@ void set_board(std::string fen_pos, uint64_t (&figuresB)[7], uint64_t (&figuresR
 }
 
 // Pinting and String Operations -----------------------------------------------------------------------------------
-inline std::string FEN_position(std::uint64_t pos) {
+std::string FEN_position(std::uint64_t pos) {
     uint8_t x = 0;
     uint8_t y = 0;
     int index = __builtin_ctzll(pos); // Get the position of the lowest set bit
@@ -116,7 +116,12 @@ inline std::string FEN_position(std::uint64_t pos) {
 }
 
 
-
+std::string FEN_Move(Move move) {
+    uint64_t from = move[0];
+    uint64_t to = move[1];   
+    uint64_t leaving_height = ((to & masks::MASK_STACKHEIGHT) >> masks::TYPE_INDEX); // Get the stack height of the moving part of the figure
+    return FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) + " "; // Add the move to the result string
+}
 
 std::string extract_FEN_Moves(Moves moves) {
     std::string result = ""; // Initialize the result string
@@ -124,7 +129,21 @@ std::string extract_FEN_Moves(Moves moves) {
         uint64_t from = move[0];
         uint64_t to = move[1];   
         uint64_t leaving_height = ((to & masks::MASK_STACKHEIGHT) >> masks::TYPE_INDEX); // Get the stack height of the moving part of the figure
-            result += FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) + " "; // Add the move to the result string
+        result += FEN_Move(move); // Add the move to the result string
+    }
+    return result;
+}
+
+std::string extract_Scored_FEN_Moves(ScoredMoves scored_moves) {
+    std::string result = ""; // Initialize the result string
+
+    for (const auto& scoredmove : scored_moves) {
+        Move move = scoredmove.move;
+        int score = scoredmove.score; // Get the score of the move
+        uint64_t from = move[0];
+        uint64_t to = move[1];   
+        uint64_t leaving_height = ((to & masks::MASK_STACKHEIGHT) >> masks::TYPE_INDEX); // Get the stack height of the moving part of the figure
+        result += FEN_Move(move) + "[" + std::to_string(score) + "] "; // Add the move to the result string
     }
     return result;
 }

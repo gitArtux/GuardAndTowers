@@ -79,10 +79,10 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
 
 
 // works for both players, just switch R and B arguments
-bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
+bool do_move(MoveHistory &history, Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
     uint64_t from = move[0];
     uint64_t to   = move[1];
-    stack.emplace_back(std::array<uint64_t, 2>{from, to});
+    history.emplace_back(std::array<uint64_t, 2>{from, to});
 
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
     to &= FILTER_FIG; // Remove the type from the destination position
@@ -90,7 +90,7 @@ bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&
     if (to & guardR || to & guardB & home) {
         return true;
     }
-    if (__builtin_expect(guardB & from,0)) {
+    if (guardB & from) {
         // Guard Move
         guardB = to;
     } else {
@@ -110,7 +110,7 @@ bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&
         figuresB_2d[__builtin_ctzll(to)] += leaving_height;
     }
     // delete enemy
-    if (__builtin_expect(to & figuresR[0],0)) {
+    if (to & figuresR[0]) {
         figuresR[0] ^= ~(to & -(to & figuresR[0] == 0));  
         figuresR[1] ^= ~(to & -(to & figuresR[1] == 0));  
         figuresR[2] ^= ~(to & -(to & figuresR[2] == 0));  
@@ -126,10 +126,10 @@ bool do_move(MoveHistory &stack, Move move, uint64_t (&figuresB)[7], uint64_t (&
     return false; 
 }
 
-void undo(MoveHistory &stack, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
-    uint64_t from = stack.back()[0];
-    uint64_t to   = stack.back()[1]; // Remove the type from the destination position
-    stack.pop_back();
+void undo(MoveHistory &history, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+    uint64_t from = history.back()[0];
+    uint64_t to   = history.back()[1]; // Remove the type from the destination position
+    history.pop_back();
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
     to &= FILTER_FIG; // Remove the type from the destination position
     uint8_t captured_height = (to & CAPTURE_MASK) >> CAPTURE_INDEX; // Remove the height from the origin position
