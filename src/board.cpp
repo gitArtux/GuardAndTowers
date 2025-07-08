@@ -1,14 +1,13 @@
-#include "calculations.hpp"
 
-#include <bitset>
-#include <string>
-
-
-#include <cstring> // For memset
-#include <iostream>
 
 // Export
 #include "board.hpp"
+
+ std::bitset<64>& db_bitset(uint64_t x) {
+    static std::bitset<64> bits;
+    bits = x;
+    return bits;
+}
 
 
 void clear_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR) {
@@ -207,7 +206,7 @@ void print_board(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guar
         std::uint64_t* figures = (l == 0) ? figuresB : figuresR;
         for(int h = 0; h < 7; ++h) {
             if (figures[h]){
-                uint64_t temp = figures[h];
+                uint64_t temp = figures[h] & ~(masks::MASK_STACKHEIGHT | masks::CAPTURE_MASK); // Remove the stack height and capture mask
                 while(temp) {
                     pos = __builtin_ctzll(temp);
                     temp &= temp - 1; 
@@ -254,12 +253,15 @@ void print_Bitboard(std::uint64_t bitboard) {
     std::cout << "Bitboard: " << std::bitset<64>(bitboard) << std::endl; // Print the bitboard in binary format
 }
 
-void get_Fen_move(std::string &fen_move, uint64_t &to, uint64_t &from) {
+Move get_Fen_move(std::string &fen_move) {
+    Move move;
     std::string from_str = fen_move.substr(0, 2);
     std::string to_str = fen_move.substr(3, 2);
     std::string height_str = fen_move.substr(6, 1);
-    to = (1ULL << (7 - (to_str[0] - 'A') + (to_str[1] - '1') * 7)); // Convert to bitboard
-    from = (1ULL << (7 - (from_str[0] - 'A') + (from_str[1] - '1') * 7)); // Convert to bitboard
+    move[0]  = (1ULL << (6 - (from_str[0] - 'A') + (from_str[1] - '1') * 7)); // Convert to bitboard
+    move[1] = (1ULL << (6 - (to_str[0] - 'A') + (to_str[1] - '1') * 7))  | ((unsigned long long)(((height_str[0] - '0'))) << masks::TYPE_INDEX); // Convert to bitboard
+    
+    return move;
 }
 
 inline int check_won(uint64_t guardB, uint64_t guardR, uint64_t figuresB, uint64_t homesquare) {

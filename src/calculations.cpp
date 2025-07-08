@@ -78,26 +78,26 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
 
 
 
+
+
 // works for both players, just switch R and B arguments
-bool do_move(MoveHistory &history, Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR, uint64_t home) {
+void do_move(Move &move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR) {
     uint64_t from = move[0];
     uint64_t to   = move[1];
-    history.emplace_back(std::array<uint64_t, 2>{from, to});
+    // history.emplace_back(std::array<uint64_t, 2>{from, to});
+
 
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
     to &= FILTER_FIG; // Remove the type from the destination position
 
-    if (to & guardR || to & guardB & home) {
-        return true;
-    }
     if (guardB & from) {
         // Guard Move
         guardB = to;
     } else {
-
-        
+        int index= __builtin_ctzll(from);
         uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
         uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
+        
         for (int l = 0; l < leaving_height; ++l) {
             
             // Remove the positions from the origin position
@@ -111,29 +111,35 @@ bool do_move(MoveHistory &history, Move move, uint64_t (&figuresB)[7], uint64_t 
     }
     // delete enemy
     if (to & figuresR[0]) {
-        figuresR[0] ^= ~(to & -(to & figuresR[0] == 0));  
-        figuresR[1] ^= ~(to & -(to & figuresR[1] == 0));  
-        figuresR[2] ^= ~(to & -(to & figuresR[2] == 0));  
-        figuresR[3] ^= ~(to & -(to & figuresR[3] == 0));  
-        figuresR[4] ^= ~(to & -(to & figuresR[4] == 0));  
-        figuresR[5] ^= ~(to & -(to & figuresR[5] == 0));  
-        figuresR[6] ^= ~(to & -(to & figuresR[6] == 0));  
+        figuresR[0] ^= to;
+        for (int h = 1; h < 7; ++h) {
+            if (to & figuresR[h]) {
+                figuresR[h] ^= to; // Remove the captured figure
+            } else {
+                break; // No more figures to remove
+            }
+        } 
         int index = __builtin_ctzll(to); 
-        to |= static_cast<uint64_t>(figuresR_2d[index]) << CAPTURE_INDEX; // Remove the height from the origin position
+        move[1] |= static_cast<uint64_t>(figuresR_2d[index]) << CAPTURE_INDEX; // Remove the height from the origin position
         figuresR_2d[index] = 0; // Remove the height from the origin position
     }
-
-    return false; 
 }
 
-void undo(MoveHistory &history, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
-    uint64_t from = history.back()[0];
-    uint64_t to   = history.back()[1]; // Remove the type from the destination position
-    history.pop_back();
+void undo(Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+    uint64_t from = move[0];
+    uint64_t to   = move[1]; // Remove the type from the destination position
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
+    uint8_t captured_height = (to & CAPTURE_MASK) >> CAPTURE_INDEX;
     to &= FILTER_FIG; // Remove the type from the destination position
-    uint8_t captured_height = (to & CAPTURE_MASK) >> CAPTURE_INDEX; // Remove the height from the origin position
-
+     // Remove the height from the origin position
+    
+    if (captured_height) {
+            for (int l = 0; l < captured_height; ++l) {
+                // !! Meta data gets written aswell but doesnt matter	
+                figuresR[l] ^= to;  
+            }
+        figuresR_2d[__builtin_ctzll(to)] = captured_height; // Remove the height from the origin position
+    }
 
     if (guardB & to) {
         // Guard Move
@@ -141,6 +147,7 @@ void undo(MoveHistory &history, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7]
         
     } else {
     
+        int index = __builtin_ctzll(from); // Get the index of the lowest set bit
         
         uint8_t origin_height  = figuresB_2d[__builtin_ctzll(from)]; // Remove the height from the origin position
         uint8_t target_height  = figuresB_2d[__builtin_ctzll(to)]; // Add the height to the destination position
@@ -154,14 +161,6 @@ void undo(MoveHistory &history, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7]
         }
         figuresB_2d[__builtin_ctzll(from)] += leaving_height;
         figuresB_2d[__builtin_ctzll(to)] -= leaving_height;
-    }
-
-    if (__builtin_expect(captured_height,0)) {
-        for (int l = 0; l < captured_height; ++l) {
-            // !! Meta data gets written aswell but doesnt matter	
-            figuresR[l] ^= to;  
-        }
-        figuresR_2d[__builtin_ctzll(to)] = captured_height; // Remove the height from the origin position
     }
 
 }
