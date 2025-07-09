@@ -1,7 +1,5 @@
 import copy
-import random
 from typing import Optional, Dict
-from mcts import MCTSNode
 from guard_towers import Board, parse_move
 
 from collections import defaultdict
@@ -333,45 +331,3 @@ def find_best_move_MM(board: Board, player: str, base_depth: int = 5) -> Optiona
             best_move = move
     return best_move
 
-
-def mcts_simulate(node: MCTSNode, eval_player: str) -> float:
-    board = copy.deepcopy(node.board)
-    player = node.player
-    for _ in range(10): # this is the depth of how many moves we simulate, similar to the depth in alphabeta search
-        moves = board.generate_moves(player)
-        if not moves:
-            break
-        move = random.choice(moves)
-        frm, to, n = parse_move(move)
-        try:
-            board.apply_move(player, frm, to, n)
-        except Exception:
-            break
-        if board.find_guard('r' if player == 'b' else 'b') is None:
-            break
-        player = 'r' if player == 'b' else 'b'
-    return evaluate(board, eval_player)
-
-
-# simulations means how many times we simulate the game from the current node, i.e. how many times we play random games from the current board state
-def mcts_find_best_move(board: Board, player: str, simulations: int = 1000) -> Optional[str]:
-    """
-    Find the best move for the given player using Monte Carlo Tree Search.
-    Args:
-        board (Board): The current game board state.
-        player (str): The player color ('b' or 'r') to find the best move for.
-        simulations (int, optional): Number of MCTS simulations to run. Defaults to 1000.
-    Returns:
-        str: The best move in string format, or None if no moves are available.
-    """
-    root = MCTSNode(copy.deepcopy(board), player)
-    if not root.untried_moves:
-        return None
-    for _ in range(simulations):
-        node = root.select()
-        if node.untried_moves:
-            node = node.expand()
-        result = mcts_simulate(node, player)
-        node.backpropagate(result)
-    best_node = root.best_child()
-    return best_node.move

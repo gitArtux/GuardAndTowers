@@ -52,7 +52,7 @@ def main():
                 board.draw()
                 ai_move = find_best_move(board, 'r', base_depth=search_depth)
                 move_count += 1
-                if move_count % 7 == 0:  # Increase search depth every 7 moves
+                if move_count % 6 == 0:  # Increase search depth every 6 moves
                     if search_depth < 6:
                         search_depth += 1
 
@@ -79,7 +79,7 @@ def main():
                 ai_move = find_best_move(board, 'b', base_depth=search_depth)
 
                 move_count += 1
-                if move_count % 7 == 0:  # Increase search depth every 7 moves
+                if move_count % 5 == 0:  # Increase search depth every 5 moves
                     if search_depth < 6:
                         search_depth += 1   
 
