@@ -2,6 +2,12 @@
 #include <cstdint>
 
 namespace masks{
+
+//ALPHA BETA
+constexpr int MIN_SCORE = -100000;
+constexpr int MAX_SCORE = 100000;
+
+    
 // MASKS -------------------------------------------------------------------------------------------------------------------
 // TODO: set up the masks for the move calculation
 // TODO: reorganize for the different dimensions for early stoppings
@@ -81,7 +87,7 @@ constexpr std::uint64_t MASK_6 = 6ULL << TYPE_INDEX;
 constexpr std::uint64_t MASK_7 = 7ULL << TYPE_INDEX; 
 constexpr std::uint64_t MASK_STACKHEIGHT = 7ULL << TYPE_INDEX; // TODO: how to handle guard?
 constexpr std::uint64_t MASK_TYPE[7]={MASK_1, MASK_2, MASK_3, MASK_4, MASK_5, MASK_6, MASK_7};
-constexpr std::uint64_t FILTER_FIG = ~(MASK_7 | CAPTURE_MASK);
+constexpr std::uint64_t FILTER_FIG = 0b0000000000000001111111111111111111111111111111111111111111111111ULL;
 // Positional Masks
 // Home squares
 constexpr uint64_t HOMESQUARE_B = 1ULL << 4;

@@ -14,9 +14,10 @@ int main() {
     uint64_t guardB;
     uint64_t guardR;
     bool isBlueTurn;
-    int depth = 5;
+    int depth = 7;
+    
+    std::string fen_pos = "r22RG1r21/2r2r13/7/4b32/b22b13/2b1BG3/7 r";
 
-    std::string fen_pos = "r62RG3/b36/7/7/7/7/3BG3 r";
     set_board(fen_pos, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
     print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     // print_board2d_red(figuresR_2d);

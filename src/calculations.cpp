@@ -81,7 +81,7 @@ Moves move_generation(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t 
 
 
 // works for both players, just switch R and B arguments
-void do_move(Move &move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t guardR) {
+void do_move(Move &move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR) {
     uint64_t from = move[0];
     uint64_t to   = move[1];
     // history.emplace_back(std::array<uint64_t, 2>{from, to});
@@ -89,6 +89,9 @@ void do_move(Move &move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8
 
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
     to &= FILTER_FIG; // Remove the type from the destination position
+
+    // hit guard
+    guardR ^= guardR & to;
 
     if (guardB & from) {
         // Guard Move
@@ -125,7 +128,7 @@ void do_move(Move &move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8
     }
 }
 
-void undo(Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB) {
+void undo(Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR) {
     uint64_t from = move[0];
     uint64_t to   = move[1]; // Remove the type from the destination position
     uint64_t leaving_height = (to & MASK_STACKHEIGHT) >> TYPE_INDEX;
@@ -140,6 +143,10 @@ void undo(Move move, uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (
             }
         figuresR_2d[__builtin_ctzll(to)] = captured_height; // Remove the height from the origin position
     }
+
+    // bring guard back to live
+    guardR |= -!guardR & to;
+
 
     if (guardB & to) {
         // Guard Move

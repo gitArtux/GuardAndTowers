@@ -10,9 +10,9 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
 // // Eval without useage of enemy use hits
 int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR) {
     if (!guardR || guardB & HOMESQUARE_R) {
-        return 100000; 
+        return MAX_SCORE; 
     } else if (!guardB || guardR & HOMESQUARE_B) {
-        return -100000; 
+        return MIN_SCORE; 
     }
       
     int score = 0;
@@ -62,49 +62,49 @@ int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, 
 
   
 
-    // positionanl
-    // heigth 1
-    uint64_t fr0 = figuresR[0];
-    uint64_t fr1 = figuresR[1];
-    uint64_t fr2 = figuresR[2];
+    // // positionanl
+    // // heigth 1
+    // uint64_t fr0 = figuresR[0];
+    // uint64_t fr1 = figuresR[1];
+    // uint64_t fr2 = figuresR[2];
 
-    uint64_t fb0 = figuresB[0];
-    uint64_t fb1 = figuresB[1];
-    uint64_t fb2 = figuresB[2];
+    // uint64_t fb0 = figuresB[0];
+    // uint64_t fb1 = figuresB[1];
+    // uint64_t fb2 = figuresB[2];
     
 
-    score -= 10 * (__builtin_popcountll(fb0 & ROW_1) - __builtin_popcountll(fr0 & ROW_7)); // Row 1
-    score += 10 * (__builtin_popcountll(fb0 & ROW_2) - __builtin_popcountll(fr0 & ROW_6)); // Row 2
-    score += 10 * (__builtin_popcountll(fb0 & ROW_3) - __builtin_popcountll(fr0 & ROW_5)); // Row 3
-    score += 10 * (__builtin_popcountll(fb0 & ROW_4) - __builtin_popcountll(fr0 & ROW_4)); // Row 4
-    score += 20 * (__builtin_popcountll(fb0 & ROW_5) - __builtin_popcountll(fr0 & ROW_3)); // Row 5
-    score += 20 * (__builtin_popcountll(fb0 & ROW_6) - __builtin_popcountll(fr0 & ROW_2)); // Row 6
-    score += 20 * (__builtin_popcountll(fb0 & ROW_7) - __builtin_popcountll(fr0 & ROW_1)); // Row 7
+    // score -= 10 * (__builtin_popcountll(fb0 & ROW_1) - __builtin_popcountll(fr0 & ROW_7)); // Row 1
+    // score += 10 * (__builtin_popcountll(fb0 & ROW_2) - __builtin_popcountll(fr0 & ROW_6)); // Row 2
+    // score += 10 * (__builtin_popcountll(fb0 & ROW_3) - __builtin_popcountll(fr0 & ROW_5)); // Row 3
+    // score += 10 * (__builtin_popcountll(fb0 & ROW_4) - __builtin_popcountll(fr0 & ROW_4)); // Row 4
+    // score += 20 * (__builtin_popcountll(fb0 & ROW_5) - __builtin_popcountll(fr0 & ROW_3)); // Row 5
+    // score += 20 * (__builtin_popcountll(fb0 & ROW_6) - __builtin_popcountll(fr0 & ROW_2)); // Row 6
+    // score += 20 * (__builtin_popcountll(fb0 & ROW_7) - __builtin_popcountll(fr0 & ROW_1)); // Row 7
 
-    // heigth 2
-    score += 10 * (__builtin_popcountll(fb1 & ROW_1) - __builtin_popcountll(fr1 & ROW_7)); // Row 1
-    score -= 10 * (__builtin_popcountll(fb1 & ROW_2) - __builtin_popcountll(fr1 & ROW_6)); // Row 2
-    score += 40 * (__builtin_popcountll(fb1 & ROW_3) - __builtin_popcountll(fr1 & ROW_5)); // Row 3
-    score += 30 * (__builtin_popcountll(fb1 & ROW_4) - __builtin_popcountll(fr1 & ROW_4)); // Row 4
-    score += 70 * (__builtin_popcountll(fb1 & ROW_5) - __builtin_popcountll(fr1 & ROW_3)); // Row 5
-    score += 30 * (__builtin_popcountll(fb1 & ROW_6) - __builtin_popcountll(fr1 & ROW_2)); // Row 6
-    score += 30 * (__builtin_popcountll(fb1 & ROW_7) - __builtin_popcountll(fr1 & ROW_1)); // Row 7
+    // // heigth 2
+    // score += 10 * (__builtin_popcountll(fb1 & ROW_1) - __builtin_popcountll(fr1 & ROW_7)); // Row 1
+    // score -= 10 * (__builtin_popcountll(fb1 & ROW_2) - __builtin_popcountll(fr1 & ROW_6)); // Row 2
+    // score += 40 * (__builtin_popcountll(fb1 & ROW_3) - __builtin_popcountll(fr1 & ROW_5)); // Row 3
+    // score += 30 * (__builtin_popcountll(fb1 & ROW_4) - __builtin_popcountll(fr1 & ROW_4)); // Row 4
+    // score += 70 * (__builtin_popcountll(fb1 & ROW_5) - __builtin_popcountll(fr1 & ROW_3)); // Row 5
+    // score += 30 * (__builtin_popcountll(fb1 & ROW_6) - __builtin_popcountll(fr1 & ROW_2)); // Row 6
+    // score += 30 * (__builtin_popcountll(fb1 & ROW_7) - __builtin_popcountll(fr1 & ROW_1)); // Row 7
 
 
-    // height 2 & blocking
-    // block at least 1s
-    score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb0)); // Row 4
-    score += 30 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb0)); // Row 5
-    score += 30 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb0)); // Row 6
+    // // height 2 & blocking
+    // // block at least 1s
+    // score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb0)); // Row 4
+    // score += 30 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb0)); // Row 5
+    // score += 30 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb0)); // Row 6
 
-    // block a least 2s
-    score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb1)); // Row 4
-    score += 20 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb1)); // Row 5
-    score += 20 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb1)); // Row 6
+    // // block a least 2s
+    // score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb1)); // Row 4
+    // score += 20 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb1)); // Row 5
+    // score += 20 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb1)); // Row 6
 
-    // block 2s 2away
-    score += 10 * (__builtin_popcountll(((fb2 & ROW_4) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_4) >> 14) & fb1)); // Row 4
-    score += 20 * (__builtin_popcountll(((fb2 & ROW_5) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_3) >> 14) & fb1)); // Row 5
+    // // block 2s 2away
+    // score += 10 * (__builtin_popcountll(((fb2 & ROW_4) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_4) >> 14) & fb1)); // Row 4
+    // score += 20 * (__builtin_popcountll(((fb2 & ROW_5) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_3) >> 14) & fb1)); // Row 5
 
     return score;
 }
@@ -120,46 +120,61 @@ inline int min(int a, int b) {
 
     
 
-ScoredMoves move_gen_sorted_B(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49] , uint64_t guardB, uint64_t guardR) {
-    Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
-    ScoredMoves scored_moves;
-    scored_moves.reserve(moves.size());
-    for (auto &move : moves) {
-        do_move(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
-        scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR)});        
-        undo(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB);
-    }
-    // Sort the moves based on their scores in descending order
-    std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score > b.score;});
-    return scored_moves;
-}
+// ScoredMoves move_gen_sorted_B(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49] , uint64_t guardB, uint64_t guardR) {
+//     Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+//     ScoredMoves scored_moves;
+//     scored_moves.reserve(moves.size());
+//     for (auto &move : moves) {
+//         do_move(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
+//         scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR)});        
+//         undo(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
+//     }
+//     // Sort the moves based on their scores in descending order
+//     std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score > b.score;});
+//     return scored_moves;
+// }
 
-ScoredMoves move_gen_sorted_R( uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49] , uint64_t guardB, uint64_t guardR) {
-    Moves moves = move_generation(figuresR, figuresB, figuresR_2d, guardR, guardB);
-    ScoredMoves scored_moves;
-    // std::cout << "FEN_Moves:" << extract_FEN_Moves(moves) << std::endl;
-    // print_board(figuresB, figuresR, guardB, guardR, false); // Print the board before the move
-    scored_moves.reserve(moves.size());
-    for (auto &move : moves) {
-        do_move(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
-        scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR)});        
-        undo(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR);
-    }
-    // Sort the moves based on their scores in ascending order
-    std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score < b.score;});
-    return scored_moves;
-}
+// ScoredMoves move_gen_sorted_R( uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49] , uint64_t guardB, uint64_t guardR) {
+//     Moves moves = move_generation(figuresR, figuresB, figuresR_2d, guardR, guardB);
+//     ScoredMoves scored_moves;
+//     // std::cout << "FEN_Moves:" << extract_FEN_Moves(moves) << std::endl;
+//     // print_board(figuresB, figuresR, guardB, guardR, false); // Print the board before the move
+//     scored_moves.reserve(moves.size());
+//     for (auto &move : moves) {
+//         do_move(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
+//         scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR)});  
+//         if (scored_moves.back().score == MIN_SCORE) {
+
+//             return
+//         }      
+//         undo(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
+//     }
+//     // Sort the moves based on their scores in ascending order
+//     std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score < b.score;});
+//     return scored_moves;
+// }
 
 
 
 ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, int depth, int alpha, int beta) {
     // Check for terminal conditions
     ScoredMove bestmove;
-    int max_eval = -100000;
+    int max_eval = MIN_SCORE;
     // std::cout << "Before Sort" << std::endl; // Debugging output  
     // print_board(figuresB, figuresR, guardB, guardR, true); // Print the board before the move
     
-    ScoredMoves scored_moves = move_gen_sorted_B(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
+    Moves moves = move_generation(figuresB, figuresR, figuresB_2d, guardB, guardR);
+    ScoredMoves scored_moves;
+    scored_moves.reserve(moves.size());
+    for (auto &move : moves) {
+        do_move(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
+        scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR)});        
+        undo(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
+        if (scored_moves.back().score == MAX_SCORE) return scored_moves.back();
+    }
+    // Sort the moves based on their scores in descending order
+    std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score > b.score;});
+
     // std::cout << "After Sort" << std::endl; // Debugging output
     // print_board(figuresB, figuresR, guardB, guardR, true); // Print the board before the move
     
@@ -180,7 +195,7 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
         int eval = betamove.score;
         
         // Undo the move
-        undo(scoredmove.move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB);
+        undo(scoredmove.move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
         // std::cout << "Undo" << std::endl; // Extract FEN moves for debugging
         // print_board(figuresB, figuresR, guardB, guardR, true); // Print the board after the move
 
@@ -202,11 +217,24 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
 
 ScoredMove beta_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t (&figuresB_2d)[49], uint8_t (&figuresR_2d)[49], uint64_t &guardB, uint64_t &guardR, int depth, int alpha, int beta) {
     
-    int min_eval = 100000;
+    int min_eval = MAX_SCORE;
     ScoredMove bestmove;
     // std::cout << "Before Sort" << std::endl; // Debugging output
     // print_board(figuresB, figuresR, guardB, guardR, true); // Print the board before the move
-    ScoredMoves scored_moves = move_gen_sorted_R(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
+    Moves moves = move_generation(figuresR, figuresB, figuresR_2d, guardR, guardB);
+    ScoredMoves scored_moves;
+    // std::cout << "FEN_Moves:" << extract_FEN_Moves(moves) << std::endl;
+    // print_board(figuresB, figuresR, guardB, guardR, false); // Print the board before the move
+    scored_moves.reserve(moves.size());
+    for (auto &move : moves) {
+        do_move(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
+        scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR)});       
+        undo(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
+        if (scored_moves.back().score == MIN_SCORE) return scored_moves.back(); 
+    }
+    // Sort the moves based on their scores in ascending order
+    std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score < b.score;});
+
     // std::cout << "After Sort" << std::endl; // Debugging output
     
     // print_board(figuresB, figuresR, guardB, guardR, true); // Print the board before the move
@@ -227,7 +255,7 @@ ScoredMove beta_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t
         // print_board(figuresB, figuresR, guardB, guardR, true);
 
         
-        undo(scoredmove.move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR);
+        undo(scoredmove.move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
 
         // std::cout << "Undo" << std::endl; // Extract FEN moves for debugging
         // print_board(figuresB, figuresR, guardB, guardR, false);
