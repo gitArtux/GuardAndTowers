@@ -4,7 +4,7 @@
 *.pdb
 *.obj
 
-/CPP_Version/build
 /GaT_python_simple/__pycache__
-/GaT_python_optimized/__pycache__
+/GaT_python_simple/logs
+/build
 /gat-gameserver-main

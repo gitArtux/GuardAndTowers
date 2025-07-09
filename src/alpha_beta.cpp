@@ -62,49 +62,49 @@ int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, 
 
   
 
-    // // positionanl
-    // // heigth 1
-    // uint64_t fr0 = figuresR[0];
-    // uint64_t fr1 = figuresR[1];
-    // uint64_t fr2 = figuresR[2];
+    // positionanl
+    // heigth 1
+    uint64_t fr0 = figuresR[0];
+    uint64_t fr1 = figuresR[1];
+    uint64_t fr2 = figuresR[2];
 
-    // uint64_t fb0 = figuresB[0];
-    // uint64_t fb1 = figuresB[1];
-    // uint64_t fb2 = figuresB[2];
+    uint64_t fb0 = figuresB[0];
+    uint64_t fb1 = figuresB[1];
+    uint64_t fb2 = figuresB[2];
     
 
-    // score -= 10 * (__builtin_popcountll(fb0 & ROW_1) - __builtin_popcountll(fr0 & ROW_7)); // Row 1
-    // score += 10 * (__builtin_popcountll(fb0 & ROW_2) - __builtin_popcountll(fr0 & ROW_6)); // Row 2
-    // score += 10 * (__builtin_popcountll(fb0 & ROW_3) - __builtin_popcountll(fr0 & ROW_5)); // Row 3
-    // score += 10 * (__builtin_popcountll(fb0 & ROW_4) - __builtin_popcountll(fr0 & ROW_4)); // Row 4
-    // score += 20 * (__builtin_popcountll(fb0 & ROW_5) - __builtin_popcountll(fr0 & ROW_3)); // Row 5
-    // score += 20 * (__builtin_popcountll(fb0 & ROW_6) - __builtin_popcountll(fr0 & ROW_2)); // Row 6
-    // score += 20 * (__builtin_popcountll(fb0 & ROW_7) - __builtin_popcountll(fr0 & ROW_1)); // Row 7
+    score -= 10 * (__builtin_popcountll(fb0 & ROW_1) - __builtin_popcountll(fr0 & ROW_7)); // Row 1
+    score += 10 * (__builtin_popcountll(fb0 & ROW_2) - __builtin_popcountll(fr0 & ROW_6)); // Row 2
+    score += 10 * (__builtin_popcountll(fb0 & ROW_3) - __builtin_popcountll(fr0 & ROW_5)); // Row 3
+    score += 10 * (__builtin_popcountll(fb0 & ROW_4) - __builtin_popcountll(fr0 & ROW_4)); // Row 4
+    score += 20 * (__builtin_popcountll(fb0 & ROW_5) - __builtin_popcountll(fr0 & ROW_3)); // Row 5
+    score += 20 * (__builtin_popcountll(fb0 & ROW_6) - __builtin_popcountll(fr0 & ROW_2)); // Row 6
+    score += 20 * (__builtin_popcountll(fb0 & ROW_7) - __builtin_popcountll(fr0 & ROW_1)); // Row 7
 
-    // // heigth 2
-    // score += 10 * (__builtin_popcountll(fb1 & ROW_1) - __builtin_popcountll(fr1 & ROW_7)); // Row 1
-    // score -= 10 * (__builtin_popcountll(fb1 & ROW_2) - __builtin_popcountll(fr1 & ROW_6)); // Row 2
-    // score += 40 * (__builtin_popcountll(fb1 & ROW_3) - __builtin_popcountll(fr1 & ROW_5)); // Row 3
-    // score += 30 * (__builtin_popcountll(fb1 & ROW_4) - __builtin_popcountll(fr1 & ROW_4)); // Row 4
-    // score += 70 * (__builtin_popcountll(fb1 & ROW_5) - __builtin_popcountll(fr1 & ROW_3)); // Row 5
-    // score += 30 * (__builtin_popcountll(fb1 & ROW_6) - __builtin_popcountll(fr1 & ROW_2)); // Row 6
-    // score += 30 * (__builtin_popcountll(fb1 & ROW_7) - __builtin_popcountll(fr1 & ROW_1)); // Row 7
+    // heigth 2
+    score += 10 * (__builtin_popcountll(fb1 & ROW_1) - __builtin_popcountll(fr1 & ROW_7)); // Row 1
+    score -= 10 * (__builtin_popcountll(fb1 & ROW_2) - __builtin_popcountll(fr1 & ROW_6)); // Row 2
+    score += 40 * (__builtin_popcountll(fb1 & ROW_3) - __builtin_popcountll(fr1 & ROW_5)); // Row 3
+    score += 30 * (__builtin_popcountll(fb1 & ROW_4) - __builtin_popcountll(fr1 & ROW_4)); // Row 4
+    score += 70 * (__builtin_popcountll(fb1 & ROW_5) - __builtin_popcountll(fr1 & ROW_3)); // Row 5
+    score += 30 * (__builtin_popcountll(fb1 & ROW_6) - __builtin_popcountll(fr1 & ROW_2)); // Row 6
+    score += 30 * (__builtin_popcountll(fb1 & ROW_7) - __builtin_popcountll(fr1 & ROW_1)); // Row 7
 
 
-    // // height 2 & blocking
-    // // block at least 1s
-    // score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb0)); // Row 4
-    // score += 30 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb0)); // Row 5
-    // score += 30 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb0)); // Row 6
+    // height 2 & blocking
+    // block at least 1s
+    score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb0)); // Row 4
+    score += 30 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb0)); // Row 5
+    score += 30 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr0) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb0)); // Row 6
 
-    // // block a least 2s
-    // score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb1)); // Row 4
-    // score += 20 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb1)); // Row 5
-    // score += 20 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb1)); // Row 6
+    // block a least 2s
+    score += 10 * (__builtin_popcountll(((fb1 & ROW_4) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_4) >> 7) & fb1)); // Row 4
+    score += 20 * (__builtin_popcountll(((fb1 & ROW_5) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_3) >> 7) & fb1)); // Row 5
+    score += 20 * (__builtin_popcountll(((fb1 & ROW_6) << 7) & fr1) - __builtin_popcountll(((fr1 & ROW_2) >> 7) & fb1)); // Row 6
 
-    // // block 2s 2away
-    // score += 10 * (__builtin_popcountll(((fb2 & ROW_4) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_4) >> 14) & fb1)); // Row 4
-    // score += 20 * (__builtin_popcountll(((fb2 & ROW_5) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_3) >> 14) & fb1)); // Row 5
+    // block 2s 2away
+    score += 10 * (__builtin_popcountll(((fb2 & ROW_4) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_4) >> 14) & fb1)); // Row 4
+    score += 20 * (__builtin_popcountll(((fb2 & ROW_5) << 14) & fr1) - __builtin_popcountll(((fr2 & ROW_3) >> 14) & fb1)); // Row 5
 
     return score;
 }

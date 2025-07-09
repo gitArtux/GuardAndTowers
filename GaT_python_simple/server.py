@@ -5,6 +5,7 @@ import random
 from gat import Game
 import pygame
 import sys
+import os
 
 server = "localhost"
 port = 5555
@@ -30,7 +31,10 @@ def threaded_client(conn, p, gameId):
     try:
         initialTime = 120000
         timePlayer = initialTime
-        fileLog = open(str(gameId) + str(p) + str(random.randint(1, 999999)) + ".txt", "a")
+        log_dir = "logs"
+        os.makedirs(log_dir, exist_ok=True)
+        log_filename = f"{gameId}_{p}_{random.randint(1, 999999)}.txt"
+        fileLog = open(os.path.join(log_dir, log_filename), "a")
         global idCount
         conn.send(str.encode(str(p)))
         firstSend = False

@@ -2,8 +2,9 @@ import pygame
 import json
 from network import Network
 
-from guard_towers import fen_to_board
-from evaluation import find_best_move
+import libboard
+
+import time
 pygame.font.init()
 
 def main():
@@ -32,11 +33,11 @@ def main():
 
         #allow input just when both players are in
         if game["bothConnected"]:
-
+            time.sleep(0.1)  # Adding a small delay to avoid flooding the server with requests
             #allow to only give input, when it is your turn
             if player == 0 and game["turn"] == "r":
                 #printing not necessary, game["board"] is the way to get the board string
-                print("New Board: " + game["board"])
+                # print("New Board: " + game["board"])
                 print("New Time: " + str(game["time"]))
 
                 #change to any input you like. This one is just console input. Change it here to respond with your Ai's answer. 
@@ -44,9 +45,12 @@ def main():
                 # i = input()
 
                 board_fen = game["board"]
-                board, _ = fen_to_board(board_fen)
-                ai_move = find_best_move(board, 'r')
+                board_fen = board_fen[:-2] + " " + board_fen[-1]  # Ensure the FEN is correctly formatted
+                print("Board FEN:", board_fen)
 
+                ai_move = libboard.compute_best_move(board_fen, 7)
+
+                print("AI Move:", ai_move)
                 #json.dumps(i) transforms the input into a json. You can print it, if you want to see the difference
                 data = json.dumps(ai_move)
 
@@ -57,11 +61,13 @@ def main():
                 print("New Time: " + str(game["time"]))
 
                 #Please also change your Input here to respond with your Ai's answer
-                
+                # i = input()
+
                 board_fen = game["board"]
-                board, _ = fen_to_board(board_fen)
-                ai_move = find_best_move(board, 'b')
-                
+                board_fen = board_fen[:-2] + " " + board_fen[-1]  # Ensure the FEN is correctly formatted
+                ai_move = libboard.compute_best_move(board_fen, 7)
+
+                print("AI Move:", ai_move)
                 data = json.dumps(ai_move)
                 n.send(data)
 
