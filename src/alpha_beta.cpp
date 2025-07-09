@@ -9,19 +9,25 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
 
 // // Eval without useage of enemy use hits
 int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, uint64_t guardR, bool isBlueTurn) {
-    uint64_t fr0 = figuresR[0];
-    uint64_t fr1 = figuresR[1];
-    uint64_t fr2 = figuresR[2];
-
     uint64_t fb0 = figuresB[0];
     uint64_t fb1 = figuresB[1];
     uint64_t fb2 = figuresB[2];
 
-    if (!guardR || guardB & HOMESQUARE_R || (isBlueTurn && (fb0 << 7 | fb0 << 1 | fb0 >>1 | fb0 >> 7) & guardR))  {
+    uint64_t fr0 = figuresR[0];
+    uint64_t fr1 = figuresR[1];
+    uint64_t fr2 = figuresR[2];
+
+    if (!guardR || guardB & HOMESQUARE_R)  {
         return MAX_SCORE; 
-    } else if (!guardB || guardR & HOMESQUARE_B || (!isBlueTurn && (fr0 >> 7 | fr0 << 1 | fr0 >>1 | fr0 << 7) & guardB) ) {
+    } else if (!guardB || guardR & HOMESQUARE_B) {
+        return MIN_SCORE; 
+    } else if  (isBlueTurn && (fb0 << 7 | fb0 << 1 | fb0 >>1 | fb0 >> 7) & guardR) {
+        return MAX_SCORE; 
+    } else if (!isBlueTurn && (fr0 >> 7 | fr0 << 1 | fr0 >>1 | fr0 << 7) & guardB) {
         return MIN_SCORE; 
     }
+
+
       
     int score = 0;
     // Tweek these
@@ -85,10 +91,10 @@ int evaluate(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint64_t guardB, 
 
     // heigth 2
     score += 10 * (__builtin_popcountll(fb1 & ROW_1) - __builtin_popcountll(fr1 & ROW_7)); // Row 1
-    score -= 10 * (__builtin_popcountll(fb1 & ROW_2) - __builtin_popcountll(fr1 & ROW_6)); // Row 2
+    score += 10 * (__builtin_popcountll(fb1 & ROW_2) - __builtin_popcountll(fr1 & ROW_6)); // Row 2
     score += 40 * (__builtin_popcountll(fb1 & ROW_3) - __builtin_popcountll(fr1 & ROW_5)); // Row 3
     score += 30 * (__builtin_popcountll(fb1 & ROW_4) - __builtin_popcountll(fr1 & ROW_4)); // Row 4
-    score += 70 * (__builtin_popcountll(fb1 & ROW_5) - __builtin_popcountll(fr1 & ROW_3)); // Row 5
+    score += 50 * (__builtin_popcountll(fb1 & ROW_5) - __builtin_popcountll(fr1 & ROW_3)); // Row 5
     score += 30 * (__builtin_popcountll(fb1 & ROW_6) - __builtin_popcountll(fr1 & ROW_2)); // Row 6
     score += 30 * (__builtin_popcountll(fb1 & ROW_7) - __builtin_popcountll(fr1 & ROW_1)); // Row 7
 
@@ -154,8 +160,7 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
         // Make the move
         // std::cout << "Before: " << FEN_Move(scoredmove.move) << std::endl; // Extract FEN moves for debugging
         // print_board(figuresB, figuresR, guardB, guardR, false); // Print the board after the move
-        
-        
+
 
         do_move(scoredmove.move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
 
@@ -201,7 +206,9 @@ ScoredMove beta_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t
         do_move(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
         scored_moves.push_back({move, evaluate(figuresB, figuresR, guardB, guardR, true)});       
         undo(move, figuresR, figuresB, figuresR_2d, figuresB_2d, guardR, guardB);
-        if (scored_moves.back().score == MIN_SCORE) return scored_moves.back(); 
+        if (scored_moves.back().score == MIN_SCORE) {
+            return scored_moves.back(); // If the move leads to a guaranteed win, return it immediately
+        }
     }
     // Sort the moves based on their scores in ascending order
     std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score < b.score;});
@@ -300,3 +307,16 @@ uint64_t hit_moves(uint64_t (&figuresE)[7], uint64_t (&figuresP)[7], uint64_t gu
 }
 
 
+std::string make_move(std::string fen_pos, int depth){
+    uint64_t figuresB[7];
+    uint64_t figuresR[7];
+    uint8_t figuresB_2d[49];
+    uint8_t figuresR_2d[49];
+    uint64_t guardB;
+    uint64_t guardR;
+    bool isBlueTurn;
+    // int depth = 5;
+
+    set_board(fen_pos, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
+    return res_FEN_Move(alpha_beta(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth));
+}

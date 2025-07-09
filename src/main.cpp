@@ -16,13 +16,14 @@ int main() {
     bool isBlueTurn;
     int depth = 5;
 
-    std::string fen_pos = "6r2/RG6/1b21b2b1b11/7/1b15/2r11r12/2r1BG3 b";
+    std::string fen_pos = "1b15/1b1r1RGr12/1r15/7/4b12/2b11b12/1r41BGb22 b";
     set_board(fen_pos, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
     print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     // print_board2d_red(figuresR_2d);
     // print_board2d_blue(figuresB_2d);
     Move move  = alpha_beta(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth);
     std::cout << "Best Move: " << FEN_Move(move) << std::endl; // Print the best move in FEN format
+    // std::cout << "EVAL: " << evaluate(figuresB, figuresR, guardB, guardR, isBlueTurn) << std::endl; // Print the evaluation of the position
     
     return 0;
 }
