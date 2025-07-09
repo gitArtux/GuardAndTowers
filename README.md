@@ -132,4 +132,8 @@
 ```
 
 
+### Build DLL
+
+g++ -O3 -std=c++17 -shared -fPIC .\\src\\extern.cpp .\\src\\alpha_beta.cpp .\\src\\board.cpp .\\src\\calculations.cpp -I .\\include -o engine.dll
+
 

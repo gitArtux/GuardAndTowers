@@ -34,3 +34,4 @@ std::string extract_Scored_FEN_Moves(ScoredMoves scored_moves);
 std::string FEN_Move(Move move);
 std::bitset<64>& db_bitset(uint64_t x);
 Move get_Fen_move(std::string &fen_move);
+std::string res_FEN_Move(Move move);

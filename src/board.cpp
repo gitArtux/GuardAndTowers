@@ -122,6 +122,13 @@ std::string FEN_Move(Move move) {
     return FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height) + " "; // Add the move to the result string
 }
 
+std::string res_FEN_Move(Move move) {
+    uint64_t from = move[0];
+    uint64_t to = move[1];   
+    uint64_t leaving_height = ((to & masks::MASK_STACKHEIGHT) >> masks::TYPE_INDEX); // Get the stack height of the moving part of the figure
+    return FEN_position(from) + '-' + FEN_position(to) + '-' + std::to_string(leaving_height); // Add the move to the result string
+}
+
 std::string extract_FEN_Moves(Moves moves) {
     std::string result = ""; // Initialize the result string
     for (const auto& move : moves) {

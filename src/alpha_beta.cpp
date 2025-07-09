@@ -307,3 +307,16 @@ uint64_t hit_moves(uint64_t (&figuresE)[7], uint64_t (&figuresP)[7], uint64_t gu
 }
 
 
+std::string make_move(std::string fen_pos, int depth){
+    uint64_t figuresB[7];
+    uint64_t figuresR[7];
+    uint8_t figuresB_2d[49];
+    uint8_t figuresR_2d[49];
+    uint64_t guardB;
+    uint64_t guardR;
+    bool isBlueTurn;
+    // int depth = 5;
+
+    set_board(fen_pos, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
+    return res_FEN_Move(alpha_beta(figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn, depth));
+}
