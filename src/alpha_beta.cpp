@@ -172,6 +172,7 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
         undo(move, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR);
         if (scored_moves.back().score == MAX_SCORE) return scored_moves.back();
     }
+    // print_board(figuresB, figuresR, guardB, guardR, true); // Print the board before the move
     // Sort the moves based on their scores in descending order
     std::sort(scored_moves.begin(), scored_moves.end(), [](const ScoredMove& a, const ScoredMove& b) {return a.score > b.score;});
 
@@ -201,7 +202,7 @@ ScoredMove alpha_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_
 
 
         // Check if the move is better than the current best move
-        if (eval > max_eval) {
+        if (eval >= max_eval) {
             max_eval = eval;
             bestmove = scoredmove;
         }
@@ -263,7 +264,7 @@ ScoredMove beta_search(uint64_t (&figuresB)[7], uint64_t (&figuresR)[7], uint8_t
 
 
         // Check if the move is better than the current best move
-        if (eval < min_eval) {
+        if (eval <= min_eval) {
             min_eval = eval;
             bestmove = scoredmove;
         }

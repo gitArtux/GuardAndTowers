@@ -16,7 +16,7 @@ int main() {
     bool isBlueTurn;
     int depth = 5;
 
-    std::string fen_pos = "r22RG1r21/2r2r13/7/4b32/3b43/7/4BG2 r";
+    std::string fen_pos = "6r2/RG6/1b21b2b1b11/7/1b15/2r11r12/2r1BG3 b";
     set_board(fen_pos, figuresB, figuresR, figuresB_2d, figuresR_2d, guardB, guardR, isBlueTurn);
     print_board(figuresB, figuresR, guardB, guardR, isBlueTurn); // Print the board
     // print_board2d_red(figuresR_2d);
