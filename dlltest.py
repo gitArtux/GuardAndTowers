@@ -1,4 +1,5 @@
 import os, ctypes
+from ctypes import c_char_p, c_int
 
 dll_path = r"C:\Users\Arthur\Documents\Studium\PSKI\GuardAndTowers\engine.dll"
 
@@ -15,8 +16,12 @@ os.add_dll_directory(os.path.dirname(dll_path))
 lib = ctypes.CDLL(dll_path)
 print("Loaded OK!")
 
+# Set the return type of make_move_c to c_char_p
+lib.make_move_c.restype = c_char_p
 
-
-
-# fen = c_char_p(b"r1r11RG1r1r1/2r11r12/3r13/7/3b13/2b11b12/b1b11BG1b1b1 r")
-# print(lib.make_move_c(fen,c_int(3)))
+fen = c_char_p(b"r1r11RG1r1r1/2r11r12/3r13/7/3b13/2b11b12/b1b11BG1b1b1 r")
+result_ptr = lib.make_move_c(fen, c_int(3))
+result_str = result_ptr.decode('utf-8')
+print("Result:", result_str)
+lib.free_string(result_ptr)
+print("Fen string freed.")

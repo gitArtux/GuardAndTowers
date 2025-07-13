@@ -3,10 +3,10 @@
 *.ilk
 *.pdb
 *.obj
+*.dll
 
 /GaT_python_simple/__pycache__
 /GaT_python_simple/logs
-/build
 /gat-gameserver-main
 /Abgabe/__pycache__
 /Abgabe/logs
