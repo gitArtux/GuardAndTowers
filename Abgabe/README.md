@@ -1,0 +1,2 @@
+- install necessary python packages if need
+- start the client.py with your console (after running the server) in the 'Abgabe' root dir using 'python client.py'

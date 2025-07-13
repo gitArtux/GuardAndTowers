@@ -39,9 +39,9 @@ def main():
             #allow to only give input, when it is your turn
             if player == 0 and game["turn"] == "r":
                 #printing not necessary, game["board"] is the way to get the board string
-                print("New Board: " + game["board"])
-                print("New Time: " + str(game["time"]))
-                print("Depth:", search_depth)
+                # print("New Board: " + game["board"])
+                # print("New Time: " + str(game["time"]))
+                # print("Depth:", search_depth)
 
                 #change to any input you like. This one is just console input. Change it here to respond with your Ai's answer. 
                 #Answer must have format: start-end-height like E7-F7-1
@@ -49,7 +49,7 @@ def main():
 
                 board_fen = game["board"]
                 board, _ = fen_to_board(board_fen)
-                board.draw()
+                # board.draw()
                 ai_move = find_best_move(board, 'r', base_depth=search_depth)
                 move_count += 1
                 if move_count % 6 == 0:  # Increase search depth every 6 moves
@@ -59,7 +59,7 @@ def main():
                 if game["time"] < 20000:  # If time is running low, reduce search depth
                     search_depth = 4
 
-                print("AI Move:", ai_move)
+                # print("AI Move:", ai_move)
 
                 #json.dumps(i) transforms the input into a json. You can print it, if you want to see the difference
                 data = json.dumps(ai_move)
@@ -67,15 +67,15 @@ def main():
                 #send data via network
                 n.send(data)
             elif player == 1 and game["turn"] == "b":
-                print("New Board: " + game["board"])
-                print("New Time: " + str(game["time"]))
-                print("Depth:", search_depth)
+                # print("New Board: " + game["board"])
+                # print("New Time: " + str(game["time"]))
+                # print("Depth:", search_depth)
 
                 #Please also change your Input here to respond with your Ai's answer
                 
                 board_fen = game["board"]
                 board, _ = fen_to_board(board_fen)
-                board.draw()
+                # board.draw()
                 ai_move = find_best_move(board, 'b', base_depth=search_depth)
 
                 move_count += 1
@@ -86,7 +86,7 @@ def main():
                 if game["time"] < 20000:  # If time is running low, reduce search depth
                     search_depth = 4
 
-                print("AI Move:", ai_move)
+                # print("AI Move:", ai_move)
                 
                 data = json.dumps(ai_move)
                 n.send(data)
